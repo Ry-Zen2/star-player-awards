@@ -386,22 +386,21 @@
 
 <script>
 /* =========================
-   CONFIG: paste your Firebase config here.
-   You can also pass ?s=fox123 in the URL to set the session code.
+   CONFIG: using your Firebase project
 ========================= */
 window.BF_SYNC = {
   provider: 'firebase',
-  // Will be overridden by ?s= param or Admin panel, but having a default helps first boot:
+  // Default session (can be overridden by ?s= param or Admin panel)
   sessionId: 'demo',
   firebaseConfig: {
-    // TODO: PASTE your firebaseConfig from Firebase Console here:
-    // apiKey: "…",
-    // authDomain: "…",
-    // databaseURL: "https://<your-db>.firebaseio.com",
-    // projectId: "…",
-    // storageBucket: "…",
-    // messagingSenderId: "…",
-    // appId: "…"
+    apiKey: "AIzaSyCPowEBl-_CSqIObkgddFD2ZrvcXS4DsO4",
+    authDomain: "bf-star-player.firebaseapp.com",
+    databaseURL: "https://bf-star-player-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "bf-star-player",
+    storageBucket: "bf-star-player.firebasestorage.app",
+    messagingSenderId: "225126593395",
+    appId: "1:225126593395:web:e3e70364b8fef101f9cb06",
+    measurementId: "G-RPHVLD60B1"
   }
 };
 
@@ -519,9 +518,6 @@ const SYNC = (()=>{
     updates['votes'] = {};
     updates['votedBy'] = {};
     updates['phase'] = 'not_started';
-    if(!keepAttendance){
-      // (not needed now, we keep attendance for "New Day")
-    }
     return rootRef.update(updates);
   }
   function generatePin(){
@@ -729,7 +725,7 @@ function renderVote(){
   if(ph==='revealed'){ showBlock('Voting is closed.'); return; }
   if(votedInitials.includes(u)){ showBlock('You have already voted this session.'); return; }
 
-  // PIN gate (only once per device per session)
+  // PIN gate (once per device per session)
   const pinOk = localStorage.getItem(LS.pinok + sessionId) === '1';
   if(SYNC.enabled && pinEnabled && !pinOk){
     openPinModal(); showBlock('Enter the session PIN to unlock voting.');

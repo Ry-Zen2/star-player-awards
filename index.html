@@ -198,7 +198,7 @@
     <!-- VOTE -->
     <section id="view-vote" class="panel hide">
       <h2>Vote</h2>
-      <div class="sub">Confirm identity once. Then pick a teammate (not yourself), <strong>Confirm</strong> the choice, and <strong>Submit</strong>.</div>
+      <div class="sub">Confirm identity once (per browser tab). Then pick a teammate (not yourself), <strong>Confirm</strong> the choice, and <strong>Submit</strong>.</div>
 
       <div class="grid cols-2">
         <div class="panel">
@@ -311,8 +311,10 @@ function saveVotes(v){ localStorage.setItem(LS.votes, JSON.stringify(v)); }
 function loadVoted(){ return JSON.parse(localStorage.getItem(LS.voted)||'[]'); }
 function saveVoted(a){ localStorage.setItem(LS.voted, JSON.stringify(a)); }
 
-function getUser(){ return localStorage.getItem(LS.user) || ''; }
-function setUser(i){ if(i) localStorage.setItem(LS.user, i); else localStorage.removeItem(LS.user); updateNav(); }
+/* Identity is session-based: resets on tab/window close */
+function getUser(){ return sessionStorage.getItem(LS.user) || ''; }
+function setUser(i){ if(i) sessionStorage.setItem(LS.user, i); else sessionStorage.removeItem(LS.user); updateNav(); }
+
 function getPhase(){ return localStorage.getItem(LS.phase) || 'not_started'; }
 function setPhase(p){ localStorage.setItem(LS.phase, p); renderPhase(); renderTeam(); renderMd(); renderVote(); }
 
@@ -754,7 +756,7 @@ $('#idOk').addEventListener('click', confirmIdentity);
   renderPhase(); renderTeam(); renderMd(); renderVote();
   showView('team'); // default to TV
 
-  // auto-prompt identity on first visit (can be dismissed)
+  // auto-prompt identity on first visit of this tab (session)
   if(!getUser()) openIdentityModal();
 })();
 </script>

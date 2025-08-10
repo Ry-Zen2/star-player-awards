@@ -1,1 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Star Player Awards • Blacfox</title>
+<meta name="color-scheme" content="dark" />
+<style>
+  :root{
+    --bg:#0b0b0c;
+    --panel:#111214;
+    --panel-2:#0f0f10;
+    --ink:#e9e9ea;
+    --muted:#b7b7ba;
+    --accent:#ff7a00;           /* Orange */
+    --accent-rgb:255,122,0;
+    --ok:#35d07f;
+    --warn:#ffd166;
+    --err:#ef476f;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:radial-gradient(1200px 1200px at 10% -10%, rgba(255,122,0,.07), transparent 60%),
+    radial-gradient(800px 800px at 120% 20%, rgba(255,122,0,.06), transparent 60%), var(--bg);
+    color:var(--ink); font:15px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    letter-spacing:.2px;
+  }
+
+  /* Subtle terminal scanlines + vignette */
+  body::before{
+    content:""; pointer-events:none; position:fixed; inset:0;
+    background:
+      repeating-linear-gradient(180deg, rgba(255,255,255,.02) 0 2px, transparent 2px 4px),
+      radial-gradient(1200px 600px at 50% -10%, rgba(255,122,0,.08), transparent 70%);
+    mix-blend-mode:soft-light; opacity:.6; z-index:0;
+  }
+  body::after{
+    content:""; position:fixed; inset:0; pointer-events:none;
+    background:radial-gradient(80% 80% at 50% 120%, rgba(0,0,0,.7), transparent 60%);
+    z-index:0;
+  }
+
+  .wrap{position:relative; z-index:1; min-height:100%; display:flex; flex-direction:column}
+
+  header{
+    position:sticky; top:0; z-index:10; background:linear-gradient(180deg, rgba(17,18,20,.95), rgba(17,18,20,.75));
+    border-bottom:1px solid rgba(255,255,255,.08); backdrop-filter: blur(6px);
+  }
+  .topbar{
+    display:flex; align-items:center; gap:14px; padding:10px 16px;
+    max-width:1100px; margin:0 auto;
+  }
+  .brand{display:flex; align-items:center; gap:10px}
+  .brand img{height:36px; width:auto; filter:drop-shadow(0 0 12px rgba(var(--accent-rgb),.35))}
+  .brand h1{margin:0; font-size:16px; letter-spacing:.8px; text-transform:uppercase}
+  .brand h1 .dot{color:var(--accent)}
+
+  nav{margin-left:auto; display:flex; gap:8px; flex-wrap:wrap}
+  .btn{
+    appearance:none; border:1px solid rgba(255,255,255,.12); background:linear-gradient(180deg,#151618,#0e0f11);
+    color:var(--ink); padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:700;
+    transition:.15s transform, .2s border-color, .2s box-shadow;
+  }
+  .btn:hover{transform:translateY(-1px); border-color:rgba(var(--accent-rgb),.6); box-shadow:0 6px 16px rgba(0,0,0,.35), inset 0 0 0 1px rgba(var(--accent-rgb),.25)}
+  .btn.accent{background:linear-gradient(180deg, rgba(var(--accent-rgb),.95), rgba(var(--accent-rgb),.8)); color:#111; border-color:transparent}
+  .btn.ghost{background:transparent}
+  .badge{display:inline-block; padding:2px 8px; border:1px solid rgba(255,255,255,.14); border-radius:999px; font-size:12px; color:var(--muted)}
+
+  main{flex:1; max-width:1100px; margin:18px auto 40px; padding:0 16px}
+
+  .panel{
+    background:conic-gradient(from 180deg at 110% -10%, rgba(var(--accent-rgb),.09), transparent 18%) , var(--panel);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:16px; padding:18px; margin:14px 0; box-shadow:0 12px 30px rgba(0,0,0,.25);
+  }
+  .panel h2{margin:0 0 10px 0; font-size:18px; letter-spacing:.5px}
+  .panel .sub{color:var(--muted); margin-top:-2px; margin-bottom:14px}
+
+  .grid{display:grid; gap:12px}
+  @media (min-width:900px){ .grid.cols-2{grid-template-columns:1fr 1fr} }
+
+  input, select, textarea{
+    width:100%; background:var(--panel-2); color:var(--ink); border:1px solid rgba(255,255,255,.12);
+    border-radius:12px; padding:10px 12px; font:inherit; outline:none;
+  }
+  textarea{min-height:120px; resize:vertical}
+  label{display:block; margin:8px 0 6px; color:var(--muted)}
+  .row{display:flex; gap:10px; flex-wrap:wrap}
+  .row > *{flex:1}
+
+  .muted{color:var(--muted)}
+  .sep{height:1px; background:linear-gradient(90deg, transparent, rgba(255,255,255,.1), transparent); margin:12px 0}
+
+  .table{width:100%; border-collapse:separate; border-spacing:0 8px}
+  .table th{font-weight:700; text-align:left; color:var(--muted); padding:6px 8px}
+  .table td{padding:10px 8px; background:rgba(255,255,255,.03); border-top:1px solid rgba(255,255,255,.08); border-bottom:1px solid rgba(255,255,255,.08)}
+  .chip{display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.12); font-size:12px}
+  .chip.ok{border-color:rgba(53,208,127,.4); color:#bff3d7} .chip.abs{border-color:rgba(239,71,111,.4); color:#ffc5d2}
+  .rank{font-weight:800; padding:2px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.12)}
+  .rank.r1{color:#111; background:linear-gradient(180deg, #ffd166, #ffbd4a)}
+  .rank.r2{background:linear-gradient(180deg, #c0c7cf, #9ea7b2); color:#111}
+  .rank.r3{background:linear-gradient(180deg, #d19b6b, #b98253); color:#111}
+
+  /* Bars */
+  .bar{height:12px; background:rgba(255,255,255,.06); border-radius:999px; overflow:hidden; outline:1px solid rgba(255,255,255,.08)}
+  .bar > span{display:block; height:100%; width:0%; background:linear-gradient(90deg, rgba(var(--accent-rgb),1), rgba(var(--accent-rgb),.55)); transition:width .9s cubic-bezier(.2,.9,.2,1.1)}
+
+  /* Drumroll overlay */
+  .drumroll{
+    position:fixed; inset:0; background:radial-gradient(120% 120% at 50% -10%, rgba(255,122,0,.15), transparent 50%), rgba(0,0,0,.9);
+    z-index:5000; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px;
+    text-align:center; backdrop-filter: blur(2px);
+  }
+  .drumroll-text{font-size:28px; letter-spacing:3px; color:var(--muted); text-transform:uppercase}
+  .countdown{font-size:64px; font-weight:900; letter-spacing:4px}
+  .drumroll-bar{width:min(520px, 86vw); height:14px; background:rgba(255,255,255,.1); border-radius:999px; overflow:hidden; outline:1px solid rgba(255,255,255,.15)}
+  .drumroll-bar .bar-fill{height:100%; width:0%; background:linear-gradient(90deg, rgba(255,255,255,.35), rgba(var(--accent-rgb),.9)); transition:width 1s linear}
+
+  .winner-reveal{display:flex; flex-direction:column; align-items:center; gap:8px}
+  .winner-title{font-size:22px; color:var(--muted); text-transform:uppercase; letter-spacing:3px}
+  .winner-name{font-size:36px; font-weight:900; padding:8px 14px; border-radius:12px; background:rgba(255,255,255,.06); outline:1px solid rgba(255,255,255,.15)}
+  .confetti{position:fixed; pointer-events:none; z-index:6000; width:8px; height:14px; opacity:.95}
+
+  /* Password modal (Admin) */
+  .password-modal{ position:fixed; inset:0; background:rgba(0,0,0,.75);
+    display:none; align-items:center; justify-content:center; z-index:4000; backdrop-filter:blur(2px);}
+  .password-modal.active{ display:flex; }
+  .password-box{ background:#111; border:1px solid rgba(var(--accent-rgb),.4); border-radius:12px;
+    padding:20px; width:min(420px,90vw); box-shadow:0 10px 30px rgba(0,0,0,.6);}
+  .password-title{ color:var(--accent); margin-bottom:10px; text-align:center; }
+  .password-actions{ display:flex; gap:10px; margin-top:10px;}
+  .password-submit,.password-cancel{ flex:1; padding:10px 12px; border-radius:10px; font-weight:700; cursor:pointer;}
+  .password-submit{ background:var(--accent); color:#111; border:none;}
+  .password-cancel{ background:transparent; border:1px solid rgba(var(--accent-rgb),.4); color:var(--accent);}
+
+  /* Title caret blink */
+  .blink{ animation: blink 1.1s steps(1,end) infinite; }
+  @keyframes blink{ 50%{ opacity:0 } }
+
+  .hide{display:none !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="topbar">
+      <div class="brand">
+        <img src="logo.png" alt="Blacfox logo" />
+        <h1>Blac<span class="dot">•</span>Star Player Awards <span class="badge">Terminal</span></h1>
+      </div>
+      <nav>
+        <button class="btn" data-view="home">Home</button>
+        <button class="btn" data-view="team">Team View</button>
+        <button class="btn" data-view="vote">Vote</button>
+        <button class="btn" data-view="results">Results</button>
+        <button class="btn ghost" id="adminBtn">Admin</button>
+        <button class="btn accent" id="revealBtn">Reveal Winner</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- HOME -->
+    <section id="view-home" class="panel">
+      <h2>Welcome<span class="blink">_</span></h2>
+      <div class="sub">Cast your vote for today’s Star Player. One vote per teammate. Team View is live on screen.</div>
+      <div class="grid cols-2">
+        <div class="panel">
+          <h3>Quick Start</h3>
+          <ol>
+            <li>Go to <strong>Vote</strong> → choose your initials → pick your Star Player.</li>
+            <li>Watch <strong>Team View</strong> for live progress.</li>
+            <li>When ready, hit <strong>Reveal Winner</strong> for a 10-second drum roll.</li>
+          </ol>
+        </div>
+        <div class="panel">
+          <h3>Today’s Team</h3>
+          <div id="homeTeam"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TEAM VIEW (always public) -->
+    <section id="view-team" class="panel">
+      <h2>Team View</h2>
+      <div class="sub">Live tally and attendance (no password required).</div>
+
+      <div class="grid cols-2">
+        <div class="panel">
+          <h3>Attendance</h3>
+          <div class="row">
+            <div class="chip"><span>👥</span><span id="t-total">0</span>&nbsp;Total</div>
+            <div class="chip ok"><span>🟢</span><span id="t-present">0</span>&nbsp;Present</div>
+            <div class="chip abs"><span>🔴</span><span id="t-absent">0</span>&nbsp;Absent</div>
+            <div class="chip"><span>🗳️</span><span id="t-voted">0</span>&nbsp;Voted</div>
+          </div>
+          <div class="sep"></div>
+          <table class="table" id="teamTable">
+            <thead><tr><th>Name</th><th>Initials</th><th>Status</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <h3>Live Results</h3>
+          <div id="teamBars"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VOTE -->
+    <section id="view-vote" class="panel">
+      <h2>Cast Your Vote</h2>
+      <div class="sub">Pick your initials (for one-vote rule) and select who you’re voting for. Self-votes are blocked.</div>
+
+      <div class="grid cols-2">
+        <div class="panel">
+          <label for="whoAmI">I am</label>
+          <select id="whoAmI"></select>
+
+          <label for="voteFor">I vote for</label>
+          <select id="voteFor"></select>
+
+          <div class="row" style="margin-top:10px">
+            <button class="btn accent" id="submitVote">Submit Vote</button>
+            <button class="btn" id="clearPick">Clear</button>
+          </div>
+          <div id="voteMsg" class="muted" style="margin-top:10px"></div>
+        </div>
+
+        <div class="panel">
+          <h3>Rules</h3>
+          <ul>
+            <li>One vote per teammate (tracked by initials).</li>
+            <li>You can’t vote for yourself.</li>
+            <li>Only present teammates appear in the ballot.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="view-results" class="panel">
+      <h2>Results</h2>
+      <div class="sub">Ranked board with animated bars.</div>
+      <div id="resultsList"></div>
+    </section>
+
+    <!-- ADMIN (password-gated) -->
+    <section id="view-admin" class="panel hide">
+      <h2>Admin Console</h2>
+      <div class="sub">Team & session controls (client-side only).</div>
+
+      <div class="grid cols-2">
+        <div class="panel">
+          <h3>Team Members</h3>
+          <label for="teamArea">Format: <code>Full Name - XX</code> per line</label>
+          <textarea id="teamArea" spellcheck="false"></textarea>
+          <div class="row" style="margin-top:10px">
+            <button class="btn accent" id="saveTeam">Save Team</button>
+            <button class="btn" id="resetSession">New Session</button>
+          </div>
+          <div class="muted" style="margin-top:8px">Seeded with: Jaydon Valentine - JV, Kerushan Governder - KG, Zubair Souma - ZS</div>
+        </div>
+
+        <div class="panel">
+          <h3>Attendance</h3>
+          <div id="adminAttendance"></div>
+          <div class="sep"></div>
+          <div class="row">
+            <button class="btn" id="exportCsv">Export CSV</button>
+            <button class="btn" id="closeVoting">Close/Open Voting</button>
+          </div>
+          <div id="adminMsg" class="muted" style="margin-top:10px"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Password modal -->
+<div class="password-modal" id="pwModal" aria-hidden="true">
+  <div class="password-box">
+    <div class="password-title">Enter Admin Password</div>
+    <input type="password" id="pwField" placeholder="Password" />
+    <div class="password-actions">
+      <button class="password-cancel" id="pwCancel">Cancel</button>
+      <button class="password-submit" id="pwOk">Continue</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================
+   Data & Storage
+========================= */
+const ADMIN_PASSWORD = 'blacfox2024';   // client-side only
+const LS_KEYS = {
+  team: 'sps_team',
+  present: 'sps_present',
+  voted: 'sps_voted_by_initials',
+  votes: 'sps_votes',
+  closed: 'sps_closed'
+};
+
+const DEFAULT_MEMBERS = [
+  {name:'Jaydon Valentine', initials:'JV', status:'present'},
+  {name:'Kerushan Governder', initials:'KG', status:'present'},
+  {name:'Zubair Souma', initials:'ZS', status:'present'}
+];
+
+function loadTeam(){
+  const raw = localStorage.getItem(LS_KEYS.team);
+  let team = raw ? JSON.parse(raw) : DEFAULT_MEMBERS.slice();
+  // Coerce fields
+  team = team.map(t=>({name:String(t.name), initials:String(t.initials).toUpperCase(), status:t.status==='absent'?'absent':'present'}));
+  return team;
+}
+function saveTeam(team){ localStorage.setItem(LS_KEYS.team, JSON.stringify(team)); }
+
+function loadVotes(){ return JSON.parse(localStorage.getItem(LS_KEYS.votes)||'{}'); }
+function saveVotes(v){ localStorage.setItem(LS_KEYS.votes, JSON.stringify(v)); }
+function loadVoted(){ return JSON.parse(localStorage.getItem(LS_KEYS.voted)||'[]'); }
+function saveVoted(a){ localStorage.setItem(LS_KEYS.voted, JSON.stringify(a)); }
+function isClosed(){ return localStorage.getItem(LS_KEYS.closed)==='1'; }
+function setClosed(flag){ localStorage.setItem(LS_KEYS.closed, flag?'1':'0'); }
+
+/* =========================
+   State
+========================= */
+let teamMembers = loadTeam();     // [{name,initials,status}]
+let votes = loadVotes();          // {initials: count}
+let votedInitials = loadVoted();  // ["JV","KG",...]
+
+/* =========================
+   Utilities & DOM
+========================= */
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+function showView(id){
+  $$('main > section').forEach(s=>s.classList.add('hide'));
+  $('#view-'+id).classList.remove('hide');
+  // Refresh dynamic sections
+  if(id==='home') renderHome();
+  if(id==='team') renderTeamView();
+  if(id==='vote') renderVote();
+  if(id==='results') renderResults();
+}
+
+function renderHome(){
+  const tgt = $('#homeTeam');
+  tgt.innerHTML = teamMembers.map(m=>{
+    const dot = m.status==='present' ? '🟢' : '🔴';
+    return `<div class="chip ${m.status==='present'?'ok':'abs'}">${dot}&nbsp;${m.name} — ${m.initials}</div>`;
+  }).join(' ');
+}
+
+function renderTeamView(){
+  // tallies
+  const total = teamMembers.length;
+  const present = teamMembers.filter(m=>m.status==='present').length;
+  const absent = total - present;
+  const voted = new Set(votedInitials).size;
+  $('#t-total').textContent = total;
+  $('#t-present').textContent = present;
+  $('#t-absent').textContent = absent;
+  $('#t-voted').textContent = voted;
+
+  // table
+  const tb = $('#teamTable tbody');
+  tb.innerHTML = teamMembers.map(m=>{
+    const chip = m.status==='present' ? '<span class="chip ok">Present</span>' : '<span class="chip abs">Absent</span>';
+    return `<tr>
+      <td>${m.name}</td>
+      <td><strong>${m.initials}</strong></td>
+      <td>${chip}</td>
+    </tr>`;
+  }).join('');
+
+  // bars
+  const bars = $('#teamBars');
+  const data = resultsData();
+  const max = Math.max(1, ...data.map(d=>d.votes));
+  bars.innerHTML = data.map((d,i)=>{
+    const pct = Math.round((d.votes/max)*100);
+    const rankCls = i===0?'r1':i===1?'r2':i===2?'r3':'';
+    return `<div style="margin:10px 0">
+      <div class="row" style="align-items:center">
+        <div class="rank ${rankCls}">#${i+1}</div>
+        <div style="font-weight:800; margin-left:8px">${d.name} <span class="muted">(${d.initials})</span></div>
+        <div style="margin-left:auto" class="badge">${d.votes} vote${d.votes===1?'':'s'}</div>
+      </div>
+      <div class="bar"><span style="width:${pct}%"></span></div>
+    </div>`;
+  }).join('');
+}
+
+function renderVote(){
+  const me = $('#whoAmI'), forSel = $('#voteFor'), msg = $('#voteMsg');
+  msg.textContent = '';
+  const present = teamMembers.filter(m=>m.status==='present');
+  me.innerHTML = '<option value="">Select your initials…</option>' + teamMembers.map(m=>`<option value="${m.initials}">${m.name} — ${m.initials}${votedInitials.includes(m.initials)?' (voted)':''}</option>`).join('');
+  forSel.innerHTML = '<option value="">Select a teammate…</option>' + present.map(m=>`<option value="${m.initials}">${m.name} — ${m.initials}</option>`).join('');
+}
+
+function renderResults(){
+  const list = $('#resultsList');
+  const data = resultsData();
+  const max = Math.max(1, ...data.map(d=>d.votes));
+  list.innerHTML = data.map((d,i)=>{
+    const pct = Math.round((d.votes/max)*100);
+    const rankCls = i===0?'r1':i===1?'r2':i===2?'r3':'';
+    return `<div class="panel">
+      <div class="row" style="align-items:center">
+        <div class="rank ${rankCls}">#${i+1}</div>
+        <div style="font-weight:800; margin-left:8px">${d.name} <span class="muted">(${d.initials})</span></div>
+        <div style="margin-left:auto" class="badge">${d.votes} vote${d.votes===1?'':'s'}</div>
+      </div>
+      <div class="bar" style="margin-top:6px"><span style="width:${pct}%"></span></div>
+    </div>`;
+  }).join('');
+}
+
+function resultsData(){
+  const present = new Set(teamMembers.filter(m=>m.status==='present').map(m=>m.initials));
+  // Include everyone (even absent) in leaderboard, but only present can receive votes realistically
+  return teamMembers
+    .map(m=>({ name:m.name, initials:m.initials, votes: Number(votes[m.initials]||0) }))
+    .sort((a,b)=>b.votes - a.votes || a.name.localeCompare(b.name));
+}
+
+function voteSubmit(){
+  const me = $('#whoAmI').value.trim().toUpperCase();
+  const pick = $('#voteFor').value.trim().toUpperCase();
+  const msg = $('#voteMsg');
+
+  if(isClosed()){
+    msg.textContent = 'Voting is currently closed.';
+    return;
+  }
+  if(!me || !pick){ msg.textContent='Select both your initials and your pick.'; return; }
+  if(me === pick){ msg.textContent='Self-votes are not allowed.'; return; }
+  const myRec = teamMembers.find(t=>t.initials===me);
+  const pickRec = teamMembers.find(t=>t.initials===pick);
+  if(!myRec){ msg.textContent='Unknown voter initials.'; return; }
+  if(votedInitials.includes(me)){ msg.textContent='Already voted.'; return; }
+  if(!pickRec || pickRec.status!=='present'){ msg.textContent='Selected teammate is not present.'; return; }
+
+  votes[pick] = (votes[pick] || 0) + 1;
+  votedInitials.push(me);
+  saveVotes(votes); saveVoted(votedInitials);
+  renderVote(); renderTeamView(); renderResults();
+  msg.textContent = 'Vote recorded. Thank you!';
+}
+
+function clearPick(){ $('#whoAmI').value=''; $('#voteFor').value=''; $('#voteMsg').textContent=''; }
+
+function exportCsv(){
+  const rows = [['Initials','Name','Votes']];
+  for(const t of teamMembers){
+    rows.push([t.initials, t.name, String(votes[t.initials]||0)]);
+  }
+  const csv = rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'star-player-results.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/* =========================
+   Reveal Winner (10s drum roll)
+========================= */
+function revealWinner(){
+  const data = resultsData();
+  const top = Math.max(0, ...data.map(d=>d.votes));
+  if(top === 0){ alert('No votes yet.'); return; }
+  const winners = data.filter(d=>d.votes===top);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'drumroll';
+  overlay.innerHTML = `
+    <div class="drumroll-text">Drum roll…</div>
+    <div class="countdown" id="dr-count">10</div>
+    <div class="drumroll-bar"><div class="bar-fill" id="dr-fill"></div></div>
+  `;
+  document.body.appendChild(overlay);
+
+  let remain = 10;
+  const num = overlay.querySelector('#dr-count');
+  const fill = overlay.querySelector('#dr-fill');
+  fill.style.width = '0%';
+
+  const tick = setInterval(()=>{
+    remain -= 1;
+    num.textContent = remain;
+    fill.style.width = `${(10 - remain) * 10}%`;
+    // subtle shake
+    overlay.style.transform = remain%2===0 ? 'translateY(-2px)' : 'translateY(0)';
+    if(remain <= 0){
+      clearInterval(tick);
+      overlay.innerHTML = `
+        <div class="winner-reveal">
+          <div class="winner-title">Star Player</div>
+          <div class="winner-name">${winners.map(w=>w.name).join(' & ')}</div>
+        </div>
+      `;
+      for(let i=0;i<150;i++) spawnConfetti();
+      setTimeout(()=>document.body.removeChild(overlay), 6000);
+    }
+  },1000);
+}
+
+function spawnConfetti(){
+  const el = document.createElement('div');
+  el.className='confetti';
+  const colors = ['#ffffff','#ffe8cc','#ffb26a','#ff7a00','#ffd166'];
+  const left = Math.random()*100;
+  const size = 6 + Math.random()*8;
+  const rot = Math.random()*360;
+  const dur = 3 + Math.random()*2;
+  el.style.left = left+'vw';
+  el.style.top = '-20px';
+  el.style.width = size+'px';
+  el.style.height = (size*1.4)+'px';
+  el.style.background = colors[Math.floor(Math.random()*colors.length)];
+  el.style.transform = `rotate(${rot}deg)`;
+  el.style.opacity = .95;
+  el.style.transition = `transform ${dur}s cubic-bezier(.2,.9,.2,1.05), top ${dur}s cubic-bezier(.2,.9,.2,1.05), opacity ${dur}s linear`;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>{
+    el.style.top = '110vh';
+    el.style.transform = `translateX(${(Math.random()*2-1)*120}px) rotate(${rot + 600}deg)`;
+    el.style.opacity = .1;
+  });
+  setTimeout(()=> el.remove(), dur*1000+500);
+}
+
+/* =========================
+   Admin
+========================= */
+function openAdmin(){
+  $('#pwModal').classList.add('active');
+  $('#pwField').value='';
+  $('#pwField').focus();
+}
+function closeAdminModal(){ $('#pwModal').classList.remove('active'); }
+function checkAdminPassword(){
+  const ok = $('#pwField').value === ADMIN_PASSWORD;
+  if(!ok){ alert('Incorrect password'); return; }
+  closeAdminModal();
+  $('#view-admin').classList.remove('hide');
+  showView('admin');
+  renderAdmin();
+}
+function renderAdmin(){
+  // textarea
+  $('#teamArea').value = teamMembers.map(m=>`${m.name} - ${m.initials}`).join('\n');
+
+  // attendance toggles
+  const tgt = $('#adminAttendance');
+  tgt.innerHTML = teamMembers.map((m,idx)=>{
+    const checked = m.status==='present' ? 'checked' : '';
+    return `<label style="display:flex;align-items:center;gap:10px;margin:6px 0">
+      <input type="checkbox" data-i="${idx}" ${checked}/> ${m.name} <span class="muted">(${m.initials})</span>
+    </label>`;
+  }).join('');
+  tgt.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+    cb.addEventListener('change', e=>{
+      const i = Number(e.target.getAttribute('data-i'));
+      teamMembers[i].status = e.target.checked ? 'present' : 'absent';
+      saveTeam(teamMembers);
+      renderTeamView(); renderVote();
+      $('#adminMsg').textContent = 'Attendance updated.';
+    });
+  });
+
+  // close/open voting button label
+  $('#closeVoting').textContent = isClosed() ? 'Open Voting' : 'Close Voting';
+}
+
+function saveTeamFromArea(){
+  const lines = $('#teamArea').value.split('\n').map(x=>x.trim()).filter(Boolean);
+  const arr = [];
+  for(const line of lines){
+    const m = line.match(/^(.+?)\s*-\s*([A-Za-z]{1,4})$/);
+    if(!m) continue;
+    arr.push({name:m[1].trim(), initials:m[2].toUpperCase(), status:'present'});
+  }
+  if(!arr.length){ alert('No valid lines. Use "Full Name - XX"'); return; }
+  teamMembers = arr;
+  saveTeam(teamMembers);
+  // Reset session tallies for fairness
+  votes = {}; votedInitials = [];
+  saveVotes(votes); saveVoted(votedInitials);
+  renderHome(); renderTeamView(); renderVote(); renderResults(); renderAdmin();
+  $('#adminMsg').textContent = 'Team saved and session reset.';
+}
+
+function newSession(){
+  if(!confirm('Start a new session? This clears votes & who voted (attendance kept).')) return;
+  votes = {}; votedInitials = [];
+  saveVotes(votes); saveVoted(votedInitials);
+  renderTeamView(); renderVote(); renderResults();
+  $('#adminMsg').textContent = 'Session cleared.';
+}
+
+function toggleClosed(){
+  setClosed(!isClosed());
+  renderAdmin();
+  $('#adminMsg').textContent = isClosed() ? 'Voting closed.' : 'Voting open.';
+}
+
+/* =========================
+   Events & Init
+========================= */
+$$('nav .btn[data-view]').forEach(b=> b.addEventListener('click', e=> showView(e.target.getAttribute('data-view'))));
+$('#revealBtn').addEventListener('click', revealWinner);
+$('#submitVote').addEventListener('click', voteSubmit);
+$('#clearPick').addEventListener('click', clearPick);
+$('#adminBtn').addEventListener('click', openAdmin);
+$('#pwCancel').addEventListener('click', closeAdminModal);
+$('#pwOk').addEventListener('click', checkAdminPassword);
+$('#saveTeam').addEventListener('click', saveTeamFromArea);
+$('#resetSession').addEventListener('click', newSession);
+$('#exportCsv').addEventListener('click', exportCsv);
+$('#closeVoting').addEventListener('click', toggleClosed);
+
+function firstInit(){
+  // Coerce any old storage into new format
+  saveTeam(teamMembers); saveVotes(votes); saveVoted(votedInitials);
+  showView('home');
+  renderHome(); renderTeamView(); renderVote(); renderResults();
+}
+firstInit();
+</script>
+</body>
+</html>
 

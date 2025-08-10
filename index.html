@@ -3,58 +3,51 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Star Player Awards • Blacfox</title>
+<title>Blacfox • Star Player</title>
 <meta name="color-scheme" content="dark" />
 <style>
   :root{
-    --bg:#0b0b0c;
-    --panel:#111214;
-    --panel-2:#0f0f10;
-    --ink:#e9e9ea;
-    --muted:#b7b7ba;
-    --accent:#ff7a00;           /* Orange */
-    --accent-rgb:255,122,0;
-    --ok:#35d07f;
-    --warn:#ffd166;
-    --err:#ef476f;
+    --bg:#0a0a0c; --panel:#111214; --panel2:#0e0f11;
+    --ink:#f0f0f2; --muted:#b6b8bd;
+    --accent:#ff7a00; --accent-rgb:255,122,0;
+    --ok:#35d07f; --warn:#ffd166; --err:#ef476f;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0; background:radial-gradient(1200px 1200px at 10% -10%, rgba(255,122,0,.07), transparent 60%),
-    radial-gradient(800px 800px at 120% 20%, rgba(255,122,0,.06), transparent 60%), var(--bg);
-    color:var(--ink); font:15px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    margin:0; background:
+      radial-gradient(1200px 800px at 10% -10%, rgba(255,122,0,.07), transparent 60%),
+      radial-gradient(900px 600px at 110% 10%, rgba(255,122,0,.05), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font:15px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     letter-spacing:.2px;
   }
-
-  /* Subtle terminal scanlines + vignette */
+  /* terminal scanlines + vignette */
   body::before{
-    content:""; pointer-events:none; position:fixed; inset:0;
-    background:
-      repeating-linear-gradient(180deg, rgba(255,255,255,.02) 0 2px, transparent 2px 4px),
-      radial-gradient(1200px 600px at 50% -10%, rgba(255,122,0,.08), transparent 70%);
+    content:""; position:fixed; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(180deg, rgba(255,255,255,.02) 0 2px, transparent 2px 4px);
     mix-blend-mode:soft-light; opacity:.6; z-index:0;
   }
   body::after{
-    content:""; position:fixed; inset:0; pointer-events:none;
-    background:radial-gradient(80% 80% at 50% 120%, rgba(0,0,0,.7), transparent 60%);
-    z-index:0;
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:radial-gradient(75% 75% at 50% 120%, rgba(0,0,0,.7), transparent 60%);
   }
 
   .wrap{position:relative; z-index:1; min-height:100%; display:flex; flex-direction:column}
 
   header{
-    position:sticky; top:0; z-index:10; background:linear-gradient(180deg, rgba(17,18,20,.95), rgba(17,18,20,.75));
-    border-bottom:1px solid rgba(255,255,255,.08); backdrop-filter: blur(6px);
+    position:sticky; top:0; z-index:10;
+    background:linear-gradient(180deg, rgba(17,18,20,.95), rgba(17,18,20,.75));
+    border-bottom:1px solid rgba(255,255,255,.08);
+    backdrop-filter: blur(6px);
   }
-  .topbar{
-    display:flex; align-items:center; gap:14px; padding:10px 16px;
-    max-width:1100px; margin:0 auto;
-  }
+  .topbar{display:flex; align-items:center; gap:14px; padding:10px 16px; max-width:1100px; margin:0 auto;}
   .brand{display:flex; align-items:center; gap:10px}
-  .brand img{height:36px; width:auto; filter:drop-shadow(0 0 12px rgba(var(--accent-rgb),.35))}
+  .brand img{height:38px; width:auto; filter:drop-shadow(0 0 12px rgba(var(--accent-rgb),.35))}
   .brand h1{margin:0; font-size:16px; letter-spacing:.8px; text-transform:uppercase}
   .brand h1 .dot{color:var(--accent)}
+  .who{margin-left:8px; color:var(--muted); font-size:13px}
 
   nav{margin-left:auto; display:flex; gap:8px; flex-wrap:wrap}
   .btn{
@@ -65,46 +58,54 @@
   .btn:hover{transform:translateY(-1px); border-color:rgba(var(--accent-rgb),.6); box-shadow:0 6px 16px rgba(0,0,0,.35), inset 0 0 0 1px rgba(var(--accent-rgb),.25)}
   .btn.accent{background:linear-gradient(180deg, rgba(var(--accent-rgb),.95), rgba(var(--accent-rgb),.8)); color:#111; border-color:transparent}
   .btn.ghost{background:transparent}
-  .badge{display:inline-block; padding:2px 8px; border:1px solid rgba(255,255,255,.14); border-radius:999px; font-size:12px; color:var(--muted)}
+  .btn.small{padding:6px 9px; font-weight:800}
 
   main{flex:1; max-width:1100px; margin:18px auto 40px; padding:0 16px}
-
   .panel{
     background:conic-gradient(from 180deg at 110% -10%, rgba(var(--accent-rgb),.09), transparent 18%) , var(--panel);
     border:1px solid rgba(255,255,255,.08);
     border-radius:16px; padding:18px; margin:14px 0; box-shadow:0 12px 30px rgba(0,0,0,.25);
   }
   .panel h2{margin:0 0 10px 0; font-size:18px; letter-spacing:.5px}
-  .panel .sub{color:var(--muted); margin-top:-2px; margin-bottom:14px}
+  .sub{color:var(--muted); margin-top:-2px; margin-bottom:14px}
 
   .grid{display:grid; gap:12px}
   @media (min-width:900px){ .grid.cols-2{grid-template-columns:1fr 1fr} }
 
   input, select, textarea{
-    width:100%; background:var(--panel-2); color:var(--ink); border:1px solid rgba(255,255,255,.12);
+    width:100%; background:var(--panel2); color:var(--ink); border:1px solid rgba(255,255,255,.12);
     border-radius:12px; padding:10px 12px; font:inherit; outline:none;
   }
   textarea{min-height:120px; resize:vertical}
   label{display:block; margin:8px 0 6px; color:var(--muted)}
   .row{display:flex; gap:10px; flex-wrap:wrap}
   .row > *{flex:1}
-
-  .muted{color:var(--muted)}
   .sep{height:1px; background:linear-gradient(90deg, transparent, rgba(255,255,255,.1), transparent); margin:12px 0}
+  .muted{color:var(--muted)}
 
-  .table{width:100%; border-collapse:separate; border-spacing:0 8px}
-  .table th{font-weight:700; text-align:left; color:var(--muted); padding:6px 8px}
-  .table td{padding:10px 8px; background:rgba(255,255,255,.03); border-top:1px solid rgba(255,255,255,.08); border-bottom:1px solid rgba(255,255,255,.08)}
   .chip{display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.12); font-size:12px}
   .chip.ok{border-color:rgba(53,208,127,.4); color:#bff3d7} .chip.abs{border-color:rgba(239,71,111,.4); color:#ffc5d2}
-  .rank{font-weight:800; padding:2px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.12)}
-  .rank.r1{color:#111; background:linear-gradient(180deg, #ffd166, #ffbd4a)}
-  .rank.r2{background:linear-gradient(180deg, #c0c7cf, #9ea7b2); color:#111}
-  .rank.r3{background:linear-gradient(180deg, #d19b6b, #b98253); color:#111}
 
   /* Bars */
   .bar{height:12px; background:rgba(255,255,255,.06); border-radius:999px; overflow:hidden; outline:1px solid rgba(255,255,255,.08)}
   .bar > span{display:block; height:100%; width:0%; background:linear-gradient(90deg, rgba(var(--accent-rgb),1), rgba(var(--accent-rgb),.55)); transition:width .9s cubic-bezier(.2,.9,.2,1.1)}
+
+  /* Phase banner (Team View) */
+  .phase{
+    display:flex; align-items:center; gap:10px; padding:12px 14px; border:1px dashed rgba(255,255,255,.16);
+    border-radius:12px; background:rgba(255,255,255,.03);
+  }
+  .pill{font-weight:800; padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.16)}
+  .pill.open{background:rgba(255,122,0,.15); border-color:rgba(var(--accent-rgb),.5); color:#ffd7b3}
+  .pill.idle{background:rgba(255,255,255,.07); color:#ddd}
+  .pill.closed{background:rgba(53,208,127,.15); color:#c9f3df; border-color:rgba(53,208,127,.45)}
+
+  /* MD mini-panel (only KG) */
+  .md-panel{
+    margin-top:10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:10px; border-radius:12px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.12)
+  }
+  .md-panel .stat{padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); color:var(--muted); font-weight:800}
 
   /* Drumroll overlay */
   .drumroll{
@@ -116,27 +117,13 @@
   .countdown{font-size:64px; font-weight:900; letter-spacing:4px}
   .drumroll-bar{width:min(520px, 86vw); height:14px; background:rgba(255,255,255,.1); border-radius:999px; overflow:hidden; outline:1px solid rgba(255,255,255,.15)}
   .drumroll-bar .bar-fill{height:100%; width:0%; background:linear-gradient(90deg, rgba(255,255,255,.35), rgba(var(--accent-rgb),.9)); transition:width 1s linear}
-
   .winner-reveal{display:flex; flex-direction:column; align-items:center; gap:8px}
   .winner-title{font-size:22px; color:var(--muted); text-transform:uppercase; letter-spacing:3px}
   .winner-name{font-size:36px; font-weight:900; padding:8px 14px; border-radius:12px; background:rgba(255,255,255,.06); outline:1px solid rgba(255,255,255,.15)}
   .confetti{position:fixed; pointer-events:none; z-index:6000; width:8px; height:14px; opacity:.95}
 
-  /* Password modal (Admin) */
-  .password-modal{ position:fixed; inset:0; background:rgba(0,0,0,.75);
-    display:none; align-items:center; justify-content:center; z-index:4000; backdrop-filter:blur(2px);}
-  .password-modal.active{ display:flex; }
-  .password-box{ background:#111; border:1px solid rgba(var(--accent-rgb),.4); border-radius:12px;
-    padding:20px; width:min(420px,90vw); box-shadow:0 10px 30px rgba(0,0,0,.6);}
-  .password-title{ color:var(--accent); margin-bottom:10px; text-align:center; }
-  .password-actions{ display:flex; gap:10px; margin-top:10px;}
-  .password-submit,.password-cancel{ flex:1; padding:10px 12px; border-radius:10px; font-weight:700; cursor:pointer;}
-  .password-submit{ background:var(--accent); color:#111; border:none;}
-  .password-cancel{ background:transparent; border:1px solid rgba(var(--accent-rgb),.4); color:var(--accent);}
-
-  /* Title caret blink */
-  .blink{ animation: blink 1.1s steps(1,end) infinite; }
-  @keyframes blink{ 50%{ opacity:0 } }
+  /* Admin password note (client-side hint only) */
+  .note{font-size:12px; color:var(--muted)}
 
   .hide{display:none !important}
 </style>
@@ -147,44 +134,34 @@
     <div class="topbar">
       <div class="brand">
         <img src="logo.png" alt="Blacfox logo" />
-        <h1>Blac<span class="dot">•</span>Star Player Awards <span class="badge">Terminal</span></h1>
+        <h1>Blacfox <span class="dot">•</span> Star Player</h1>
+        <div class="who" id="whoAmIText"></div>
       </div>
       <nav>
-        <button class="btn" data-view="home">Home</button>
         <button class="btn" data-view="team">Team View</button>
         <button class="btn" data-view="vote">Vote</button>
-        <button class="btn" data-view="results">Results</button>
-        <button class="btn ghost" id="adminBtn">Admin</button>
-        <button class="btn accent" id="revealBtn">Reveal Winner</button>
+        <button class="btn ghost hide" id="adminNav" data-view="admin">Admin</button>
       </nav>
     </div>
   </header>
 
   <main>
-    <!-- HOME -->
-    <section id="view-home" class="panel">
-      <h2>Welcome<span class="blink">_</span></h2>
-      <div class="sub">Cast your vote for today’s Star Player. One vote per teammate. Team View is live on screen.</div>
-      <div class="grid cols-2">
-        <div class="panel">
-          <h3>Quick Start</h3>
-          <ol>
-            <li>Go to <strong>Vote</strong> → choose your initials → pick your Star Player.</li>
-            <li>Watch <strong>Team View</strong> for live progress.</li>
-            <li>When ready, hit <strong>Reveal Winner</strong> for a 10-second drum roll.</li>
-          </ol>
-        </div>
-        <div class="panel">
-          <h3>Today’s Team</h3>
-          <div id="homeTeam"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- TEAM VIEW (always public) -->
+    <!-- TEAM VIEW -->
     <section id="view-team" class="panel">
       <h2>Team View</h2>
-      <div class="sub">Live tally and attendance (no password required).</div>
+      <div id="phaseBanner" class="phase">
+        <span id="phasePill" class="pill idle">Waiting</span>
+        <span id="phaseText" class="muted">Waiting to begin…</span>
+      </div>
+
+      <div class="md-panel hide" id="mdPanel">
+        <span class="stat">Present: <b id="mdPresent">0</b></span>
+        <span class="stat">Votes: <b id="mdVotes">0</b></span>
+        <button class="btn small accent hide" id="btnStart">Start Voting</button>
+        <button class="btn small accent hide" id="btnReveal">Reveal Winner</button>
+      </div>
+
+      <div class="sep"></div>
 
       <div class="grid cols-2">
         <div class="panel">
@@ -196,61 +173,56 @@
             <div class="chip"><span>🗳️</span><span id="t-voted">0</span>&nbsp;Voted</div>
           </div>
           <div class="sep"></div>
-          <table class="table" id="teamTable">
+          <table class="table" id="teamTable" style="width:100%; border-collapse:separate; border-spacing:0 8px">
             <thead><tr><th>Name</th><th>Initials</th><th>Status</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
 
         <div class="panel">
-          <h3>Live Results</h3>
+          <h3 id="resultsTitle">Results</h3>
+          <div id="resultsHint" class="muted">Results are hidden until the winner is revealed.</div>
           <div id="teamBars"></div>
         </div>
       </div>
     </section>
 
     <!-- VOTE -->
-    <section id="view-vote" class="panel">
-      <h2>Cast Your Vote</h2>
-      <div class="sub">Pick your initials (for one-vote rule) and select who you’re voting for. Self-votes are blocked.</div>
+    <section id="view-vote" class="panel hide">
+      <h2>Vote</h2>
+      <div class="sub">First, confirm your identity to mark attendance. You’ll then be able to vote (when voting is open).</div>
 
       <div class="grid cols-2">
         <div class="panel">
-          <label for="whoAmI">I am</label>
-          <select id="whoAmI"></select>
-
-          <label for="voteFor">I vote for</label>
-          <select id="voteFor"></select>
-
+          <label for="idSelect">I am</label>
+          <select id="idSelect"></select>
           <div class="row" style="margin-top:10px">
-            <button class="btn accent" id="submitVote">Submit Vote</button>
-            <button class="btn" id="clearPick">Clear</button>
+            <button class="btn accent" id="confirmIdentity">Confirm identity</button>
+            <button class="btn" id="clearIdentity">Clear</button>
           </div>
-          <div id="voteMsg" class="muted" style="margin-top:10px"></div>
+          <div id="idMsg" class="muted" style="margin-top:10px"></div>
         </div>
 
-        <div class="panel">
-          <h3>Rules</h3>
-          <ul>
-            <li>One vote per teammate (tracked by initials).</li>
-            <li>You can’t vote for yourself.</li>
-            <li>Only present teammates appear in the ballot.</li>
-          </ul>
+        <div class="panel" id="votePanel">
+          <h3>Cast your vote</h3>
+          <div id="voteGuard" class="muted">Confirm your identity first.</div>
+          <div id="voteForm" class="hide">
+            <label for="voteFor">I vote for</label>
+            <select id="voteFor"></select>
+            <div class="row" style="margin-top:10px">
+              <button class="btn accent" id="submitVote">Submit Vote</button>
+              <button class="btn" id="clearPick">Clear</button>
+            </div>
+            <div id="voteMsg" class="muted" style="margin-top:10px"></div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- RESULTS -->
-    <section id="view-results" class="panel">
-      <h2>Results</h2>
-      <div class="sub">Ranked board with animated bars.</div>
-      <div id="resultsList"></div>
-    </section>
-
-    <!-- ADMIN (password-gated) -->
+    <!-- ADMIN (only ZS) -->
     <section id="view-admin" class="panel hide">
-      <h2>Admin Console</h2>
-      <div class="sub">Team & session controls (client-side only).</div>
+      <h2>Admin</h2>
+      <div class="sub">Team & session controls (visible only when you are ZS).</div>
 
       <div class="grid cols-2">
         <div class="panel">
@@ -261,7 +233,7 @@
             <button class="btn accent" id="saveTeam">Save Team</button>
             <button class="btn" id="resetSession">New Session</button>
           </div>
-          <div class="muted" style="margin-top:8px">Seeded with: Jaydon Valentine - JV, Kerushan Governder - KG, Zubair Souma - ZS</div>
+          <p class="note" style="margin-top:8px">Changes save to this device (localStorage).</p>
         </div>
 
         <div class="panel">
@@ -270,7 +242,6 @@
           <div class="sep"></div>
           <div class="row">
             <button class="btn" id="exportCsv">Export CSV</button>
-            <button class="btn" id="closeVoting">Close/Open Voting</button>
           </div>
           <div id="adminMsg" class="muted" style="margin-top:10px"></div>
         </div>
@@ -279,52 +250,54 @@
   </main>
 </div>
 
-<!-- Password modal -->
-<div class="password-modal" id="pwModal" aria-hidden="true">
-  <div class="password-box">
-    <div class="password-title">Enter Admin Password</div>
-    <input type="password" id="pwField" placeholder="Password" />
-    <div class="password-actions">
-      <button class="password-cancel" id="pwCancel">Cancel</button>
-      <button class="password-submit" id="pwOk">Continue</button>
-    </div>
-  </div>
-</div>
-
 <script>
 /* =========================
    Data & Storage
 ========================= */
-const ADMIN_PASSWORD = 'blacfox2024';   // client-side only
-const LS_KEYS = {
-  team: 'sps_team',
-  present: 'sps_present',
-  voted: 'sps_voted_by_initials',
-  votes: 'sps_votes',
-  closed: 'sps_closed'
+const LS = {
+  team:'bf_team',
+  votes:'bf_votes',
+  voted:'bf_voted_by',
+  user:'bf_current_user',
+  phase:'bf_phase' // 'not_started' | 'open' | 'revealed'
 };
 
+// Default team from your list
 const DEFAULT_MEMBERS = [
-  {name:'Jaydon Valentine', initials:'JV', status:'present'},
-  {name:'Kerushan Governder', initials:'KG', status:'present'},
-  {name:'Zubair Souma', initials:'ZS', status:'present'}
+  {name:'Olwethu',     initials:'OB', status:'absent'},
+  {name:'Christopher', initials:'CB', status:'absent'},
+  {name:'Malaika',     initials:'MR', status:'absent'},
+  {name:'Amilio',      initials:'AB', status:'absent'},
+  {name:'Zubair',      initials:'ZS', status:'absent'},
+  {name:'Amjad',       initials:'AZ', status:'absent'},
+  {name:'Jerome',      initials:'JM', status:'absent'},
+  {name:'Emilio',      initials:'ED', status:'absent'},
+  {name:'Benita',      initials:'BJ', status:'absent'},
+  {name:'Jaydon',      initials:'JV', status:'absent'},
+  {name:'Stehpan',     initials:'SE', status:'absent'},
+  {name:'Kerushan',    initials:'KG', status:'absent'},
+  {name:'Payal',       initials:'PS', status:'absent'},
+  {name:'Yudhveer',    initials:'YM', status:'absent'},
+  {name:'Rinolan',     initials:'RR', status:'absent'},
+  {name:'Fhad',        initials:'FW', status:'absent'},
+  {name:'Brendon',     initials:'BS', status:'absent'},
 ];
 
 function loadTeam(){
-  const raw = localStorage.getItem(LS_KEYS.team);
+  const raw = localStorage.getItem(LS.team);
   let team = raw ? JSON.parse(raw) : DEFAULT_MEMBERS.slice();
-  // Coerce fields
-  team = team.map(t=>({name:String(t.name), initials:String(t.initials).toUpperCase(), status:t.status==='absent'?'absent':'present'}));
-  return team;
+  return team.map(t=>({name:String(t.name), initials:String(t.initials).toUpperCase(), status:t.status==='present'?'present':'absent'}));
 }
-function saveTeam(team){ localStorage.setItem(LS_KEYS.team, JSON.stringify(team)); }
+function saveTeam(t){ localStorage.setItem(LS.team, JSON.stringify(t)); }
 
-function loadVotes(){ return JSON.parse(localStorage.getItem(LS_KEYS.votes)||'{}'); }
-function saveVotes(v){ localStorage.setItem(LS_KEYS.votes, JSON.stringify(v)); }
-function loadVoted(){ return JSON.parse(localStorage.getItem(LS_KEYS.voted)||'[]'); }
-function saveVoted(a){ localStorage.setItem(LS_KEYS.voted, JSON.stringify(a)); }
-function isClosed(){ return localStorage.getItem(LS_KEYS.closed)==='1'; }
-function setClosed(flag){ localStorage.setItem(LS_KEYS.closed, flag?'1':'0'); }
+function loadVotes(){ return JSON.parse(localStorage.getItem(LS.votes)||'{}'); }
+function saveVotes(v){ localStorage.setItem(LS.votes, JSON.stringify(v)); }
+function loadVoted(){ return JSON.parse(localStorage.getItem(LS.voted)||'[]'); }
+function saveVoted(a){ localStorage.setItem(LS.voted, JSON.stringify(a)); }
+function getUser(){ return localStorage.getItem(LS.user) || ''; }
+function setUser(i){ if(i) localStorage.setItem(LS.user, i); else localStorage.removeItem(LS.user); updateNav(); }
+function getPhase(){ return localStorage.getItem(LS.phase) || 'not_started'; }
+function setPhase(p){ localStorage.setItem(LS.phase, p); renderPhase(); renderTeam(); renderMd(); renderVote(); }
 
 /* =========================
    State
@@ -334,34 +307,64 @@ let votes = loadVotes();          // {initials: count}
 let votedInitials = loadVoted();  // ["JV","KG",...]
 
 /* =========================
-   Utilities & DOM
+   Utilities
 ========================= */
-const $ = sel => document.querySelector(sel);
-const $$ = sel => Array.from(document.querySelectorAll(sel));
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
 function showView(id){
   $$('main > section').forEach(s=>s.classList.add('hide'));
   $('#view-'+id).classList.remove('hide');
-  // Refresh dynamic sections
-  if(id==='home') renderHome();
-  if(id==='team') renderTeamView();
-  if(id==='vote') renderVote();
-  if(id==='results') renderResults();
+  if(id==='team'){ renderTeam(); renderMd(); }
+  if(id==='vote'){ renderVote(); }
+  if(id==='admin'){ renderAdmin(); }
 }
-
-function renderHome(){
-  const tgt = $('#homeTeam');
-  tgt.innerHTML = teamMembers.map(m=>{
-    const dot = m.status==='present' ? '🟢' : '🔴';
-    return `<div class="chip ${m.status==='present'?'ok':'abs'}">${dot}&nbsp;${m.name} — ${m.initials}</div>`;
-  }).join(' ');
+function resultsData(){
+  return teamMembers
+    .map(m=>({ name:m.name, initials:m.initials, votes: Number(votes[m.initials]||0) }))
+    .sort((a,b)=>b.votes - a.votes || a.name.localeCompare(b.name));
 }
-
-function renderTeamView(){
-  // tallies
-  const total = teamMembers.length;
+function tallies(){
+  const total   = teamMembers.length;
   const present = teamMembers.filter(m=>m.status==='present').length;
-  const absent = total - present;
-  const voted = new Set(votedInitials).size;
+  const absent  = total - present;
+  const voted   = new Set(votedInitials).size;
+  return {total, present, absent, voted};
+}
+function updateNav(){
+  const u = getUser();
+  $('#whoAmIText').textContent = u ? `You are: ${u}` : '';
+  // Admin nav only if ZS
+  const isZS = u==='ZS';
+  const adminBtn = $('#adminNav');
+  adminBtn.classList.toggle('hide', !isZS);
+}
+
+/* =========================
+   TEAM VIEW
+========================= */
+function renderPhase(){
+  const phase = getPhase();
+  const pill = $('#phasePill');
+  const text = $('#phaseText');
+  if(phase==='not_started'){
+    pill.className='pill idle'; pill.textContent='Waiting';
+    text.textContent='Waiting to begin…';
+  }else if(phase==='open'){
+    pill.className='pill open'; pill.textContent='Voting';
+    text.textContent='Voting still in progress';
+  }else{
+    pill.className='pill closed'; pill.textContent='Closed';
+    text.textContent='Winner revealed';
+  }
+  // results visibility
+  const revealed = phase==='revealed';
+  $('#resultsHint').classList.toggle('hide', revealed);
+  $('#teamBars').classList.toggle('hide', !revealed);
+  $('#resultsTitle').textContent = revealed ? 'Results' : 'Results (hidden)';
+}
+
+function renderTeam(){
+  const {total, present, absent, voted} = tallies();
   $('#t-total').textContent = total;
   $('#t-present').textContent = present;
   $('#t-absent').textContent = absent;
@@ -378,106 +381,65 @@ function renderTeamView(){
     </tr>`;
   }).join('');
 
-  // bars
+  // bars (only after reveal)
   const bars = $('#teamBars');
   const data = resultsData();
   const max = Math.max(1, ...data.map(d=>d.votes));
-  bars.innerHTML = data.map((d,i)=>{
+  bars.innerHTML = data.map(d=>{
     const pct = Math.round((d.votes/max)*100);
-    const rankCls = i===0?'r1':i===1?'r2':i===2?'r3':'';
     return `<div style="margin:10px 0">
       <div class="row" style="align-items:center">
-        <div class="rank ${rankCls}">#${i+1}</div>
-        <div style="font-weight:800; margin-left:8px">${d.name} <span class="muted">(${d.initials})</span></div>
-        <div style="margin-left:auto" class="badge">${d.votes} vote${d.votes===1?'':'s'}</div>
+        <div style="font-weight:800;">${d.name} <span class="muted">(${d.initials})</span></div>
+        <div style="margin-left:auto" class="chip">${d.votes} vote${d.votes===1?'':'s'}</div>
       </div>
       <div class="bar"><span style="width:${pct}%"></span></div>
     </div>`;
   }).join('');
 }
 
-function renderVote(){
-  const me = $('#whoAmI'), forSel = $('#voteFor'), msg = $('#voteMsg');
-  msg.textContent = '';
-  const present = teamMembers.filter(m=>m.status==='present');
-  me.innerHTML = '<option value="">Select your initials…</option>' + teamMembers.map(m=>`<option value="${m.initials}">${m.name} — ${m.initials}${votedInitials.includes(m.initials)?' (voted)':''}</option>`).join('');
-  forSel.innerHTML = '<option value="">Select a teammate…</option>' + present.map(m=>`<option value="${m.initials}">${m.name} — ${m.initials}</option>`).join('');
+function renderMd(){
+  const u = getUser();
+  const isKG = u==='KG';
+  const panel = $('#mdPanel');
+  panel.classList.toggle('hide', !isKG);
+  if(!isKG) return;
+
+  const {present, voted} = tallies();
+  $('#mdPresent').textContent = present;
+  $('#mdVotes').textContent = voted;
+
+  const phase = getPhase();
+  const btnStart = $('#btnStart');
+  const btnReveal = $('#btnReveal');
+  btnStart.classList.toggle('hide', phase!=='not_started');
+  btnReveal.classList.toggle('hide', phase!=='open');
 }
 
-function renderResults(){
-  const list = $('#resultsList');
-  const data = resultsData();
-  const max = Math.max(1, ...data.map(d=>d.votes));
-  list.innerHTML = data.map((d,i)=>{
-    const pct = Math.round((d.votes/max)*100);
-    const rankCls = i===0?'r1':i===1?'r2':i===2?'r3':'';
-    return `<div class="panel">
-      <div class="row" style="align-items:center">
-        <div class="rank ${rankCls}">#${i+1}</div>
-        <div style="font-weight:800; margin-left:8px">${d.name} <span class="muted">(${d.initials})</span></div>
-        <div style="margin-left:auto" class="badge">${d.votes} vote${d.votes===1?'':'s'}</div>
-      </div>
-      <div class="bar" style="margin-top:6px"><span style="width:${pct}%"></span></div>
-    </div>`;
-  }).join('');
+/* Start + Reveal (KG only) */
+function mdStartVoting(){
+  setPhase('open');
+}
+function mdReveal(){
+  // close phase immediately so new votes can't slip in
+  setPhase('revealed');
+  revealOverlay();
 }
 
-function resultsData(){
-  const present = new Set(teamMembers.filter(m=>m.status==='present').map(m=>m.initials));
-  // Include everyone (even absent) in leaderboard, but only present can receive votes realistically
-  return teamMembers
-    .map(m=>({ name:m.name, initials:m.initials, votes: Number(votes[m.initials]||0) }))
-    .sort((a,b)=>b.votes - a.votes || a.name.localeCompare(b.name));
-}
-
-function voteSubmit(){
-  const me = $('#whoAmI').value.trim().toUpperCase();
-  const pick = $('#voteFor').value.trim().toUpperCase();
-  const msg = $('#voteMsg');
-
-  if(isClosed()){
-    msg.textContent = 'Voting is currently closed.';
-    return;
-  }
-  if(!me || !pick){ msg.textContent='Select both your initials and your pick.'; return; }
-  if(me === pick){ msg.textContent='Self-votes are not allowed.'; return; }
-  const myRec = teamMembers.find(t=>t.initials===me);
-  const pickRec = teamMembers.find(t=>t.initials===pick);
-  if(!myRec){ msg.textContent='Unknown voter initials.'; return; }
-  if(votedInitials.includes(me)){ msg.textContent='Already voted.'; return; }
-  if(!pickRec || pickRec.status!=='present'){ msg.textContent='Selected teammate is not present.'; return; }
-
-  votes[pick] = (votes[pick] || 0) + 1;
-  votedInitials.push(me);
-  saveVotes(votes); saveVoted(votedInitials);
-  renderVote(); renderTeamView(); renderResults();
-  msg.textContent = 'Vote recorded. Thank you!';
-}
-
-function clearPick(){ $('#whoAmI').value=''; $('#voteFor').value=''; $('#voteMsg').textContent=''; }
-
-function exportCsv(){
-  const rows = [['Initials','Name','Votes']];
-  for(const t of teamMembers){
-    rows.push([t.initials, t.name, String(votes[t.initials]||0)]);
-  }
-  const csv = rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\r\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'star-player-results.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-}
-
-/* =========================
-   Reveal Winner (10s drum roll)
-========================= */
-function revealWinner(){
+/* 10s overlay */
+function revealOverlay(){
   const data = resultsData();
   const top = Math.max(0, ...data.map(d=>d.votes));
-  if(top === 0){ alert('No votes yet.'); return; }
-  const winners = data.filter(d=>d.votes===top);
+  if(top===0){
+    // still show overlay for effect, but “no votes”
+    const overlay = document.createElement('div');
+    overlay.className='drumroll';
+    overlay.innerHTML = `<div class="winner-reveal"><div class="winner-title">No votes cast</div></div>`;
+    document.body.appendChild(overlay);
+    setTimeout(()=>overlay.remove(), 2000);
+    return;
+  }
 
+  const winners = data.filter(d=>d.votes===top);
   const overlay = document.createElement('div');
   overlay.className = 'drumroll';
   overlay.innerHTML = `
@@ -496,7 +458,6 @@ function revealWinner(){
     remain -= 1;
     num.textContent = remain;
     fill.style.width = `${(10 - remain) * 10}%`;
-    // subtle shake
     overlay.style.transform = remain%2===0 ? 'translateY(-2px)' : 'translateY(0)';
     if(remain <= 0){
       clearInterval(tick);
@@ -507,11 +468,10 @@ function revealWinner(){
         </div>
       `;
       for(let i=0;i<150;i++) spawnConfetti();
-      setTimeout(()=>document.body.removeChild(overlay), 6000);
+      setTimeout(()=>overlay.remove(), 6000);
     }
   },1000);
 }
-
 function spawnConfetti(){
   const el = document.createElement('div');
   el.className='confetti';
@@ -538,27 +498,108 @@ function spawnConfetti(){
 }
 
 /* =========================
-   Admin
+   VOTE (identity-first)
 ========================= */
-function openAdmin(){
-  $('#pwModal').classList.add('active');
-  $('#pwField').value='';
-  $('#pwField').focus();
+function renderVote(){
+  const u = getUser();
+
+  // Populate identity list
+  const idSel = $('#idSelect');
+  idSel.innerHTML = '<option value="">Select your name…</option>' +
+    teamMembers.map(m=>`<option value="${m.initials}" ${u===m.initials?'selected':''}>${m.name} — ${m.initials}</option>`).join('');
+
+  // Post-identity rules
+  $('#voteGuard').classList.toggle('hide', !!u);
+  $('#voteForm').classList.toggle('hide', !u);
+
+  // Special experiences
+  if(u==='KG'){
+    $('#voteGuard').textContent = 'Hi KG. Use Team View to start voting and reveal the winner.';
+  }else if(u==='ZS'){
+    $('#voteGuard').textContent = 'Hi ZS. Admin is available in the top-right.';
+  }else if(!u){
+    $('#voteGuard').textContent = 'Confirm your identity to proceed.';
+  }else{
+    const phase = getPhase();
+    if(phase==='not_started'){ $('#voteGuard').textContent = 'Voting has not started yet.'; }
+    if(phase==='revealed'){ $('#voteGuard').textContent = 'Voting is closed.'; }
+  }
+
+  // Ballot list (present teammates, excluding self)
+  const ballot = teamMembers.filter(m=>m.status==='present' && m.initials!==u);
+  $('#voteFor').innerHTML = '<option value="">Select a teammate…</option>' +
+    ballot.map(m=>`<option value="${m.initials}">${m.name} — ${m.initials}</option>`).join('');
+
+  // Voted state message
+  const msg = $('#voteMsg');
+  if(u && votedInitials.includes(u)) msg.textContent = 'You have already voted.';
+  else msg.textContent = '';
 }
-function closeAdminModal(){ $('#pwModal').classList.remove('active'); }
-function checkAdminPassword(){
-  const ok = $('#pwField').value === ADMIN_PASSWORD;
-  if(!ok){ alert('Incorrect password'); return; }
-  closeAdminModal();
-  $('#view-admin').classList.remove('hide');
-  showView('admin');
-  renderAdmin();
+
+function confirmIdentity(){
+  const val = $('#idSelect').value.trim().toUpperCase();
+  const msg = $('#idMsg');
+  if(!val){ msg.textContent = 'Please select your name.'; return; }
+
+  // Mark attendance present
+  const rec = teamMembers.find(t=>t.initials===val);
+  if(!rec){ msg.textContent = 'Unknown selection.'; return; }
+  rec.status = 'present';
+  saveTeam(teamMembers);
+
+  setUser(val);
+  msg.textContent = `Identity confirmed: ${rec.name} (${rec.initials}).`;
+  updateNav();
+  renderTeam(); renderMd(); renderVote(); renderPhase();
 }
+
+function clearIdentity(){
+  setUser('');
+  $('#idMsg').textContent = 'Identity cleared on this device.';
+  renderVote(); renderMd(); updateNav();
+}
+
+function voteSubmit(){
+  const u = getUser();
+  const msg = $('#voteMsg');
+
+  if(!u){ msg.textContent='Confirm identity first.'; return; }
+  if(u==='KG'){ msg.textContent='KG does not vote. Use Team View to manage the reveal.'; return; }
+  if(u==='ZS'){ /* allow ZS to vote as well */ }
+
+  if(getPhase()!=='open'){ msg.textContent='Voting is not open.'; return; }
+  if(votedInitials.includes(u)){ msg.textContent='You have already voted.'; return; }
+
+  const pick = $('#voteFor').value.trim().toUpperCase();
+  if(!pick){ msg.textContent='Select your pick.'; return; }
+  if(pick===u){ msg.textContent='Self-votes are not allowed.'; return; }
+
+  const pickRec = teamMembers.find(t=>t.initials===pick && t.status==='present');
+  if(!pickRec){ msg.textContent='Selected teammate is not present.'; return; }
+
+  votes[pick] = (votes[pick]||0) + 1;
+  votedInitials.push(u);
+  saveVotes(votes); saveVoted(votedInitials);
+
+  msg.textContent = 'Vote recorded. Thank you!';
+  renderTeam(); renderMd(); renderVote();
+}
+function clearPick(){ $('#voteFor').value=''; $('#voteMsg').textContent=''; }
+
+/* =========================
+   ADMIN (ZS only)
+========================= */
 function renderAdmin(){
+  const u = getUser();
+  const allowed = (u==='ZS');
+  if(!allowed){
+    $('#view-admin').innerHTML = `<div class="panel"><h2>Admin</h2><p class="muted">Access denied. This section is visible only when the confirmed user is ZS.</p></div>`;
+    return;
+  }
   // textarea
   $('#teamArea').value = teamMembers.map(m=>`${m.name} - ${m.initials}`).join('\n');
 
-  // attendance toggles
+  // attendance controls
   const tgt = $('#adminAttendance');
   tgt.innerHTML = teamMembers.map((m,idx)=>{
     const checked = m.status==='present' ? 'checked' : '';
@@ -571,13 +612,10 @@ function renderAdmin(){
       const i = Number(e.target.getAttribute('data-i'));
       teamMembers[i].status = e.target.checked ? 'present' : 'absent';
       saveTeam(teamMembers);
-      renderTeamView(); renderVote();
       $('#adminMsg').textContent = 'Attendance updated.';
+      renderTeam(); renderVote(); renderMd();
     });
   });
-
-  // close/open voting button label
-  $('#closeVoting').textContent = isClosed() ? 'Open Voting' : 'Close Voting';
 }
 
 function saveTeamFromArea(){
@@ -586,55 +624,69 @@ function saveTeamFromArea(){
   for(const line of lines){
     const m = line.match(/^(.+?)\s*-\s*([A-Za-z]{1,4})$/);
     if(!m) continue;
-    arr.push({name:m[1].trim(), initials:m[2].toUpperCase(), status:'present'});
+    arr.push({name:m[1].trim(), initials:m[2].toUpperCase(), status:'absent'});
   }
   if(!arr.length){ alert('No valid lines. Use "Full Name - XX"'); return; }
   teamMembers = arr;
   saveTeam(teamMembers);
-  // Reset session tallies for fairness
   votes = {}; votedInitials = [];
   saveVotes(votes); saveVoted(votedInitials);
-  renderHome(); renderTeamView(); renderVote(); renderResults(); renderAdmin();
-  $('#adminMsg').textContent = 'Team saved and session reset.';
+  $('#adminMsg').textContent = 'Team saved. Session reset.';
+  renderTeam(); renderVote(); renderMd(); renderPhase();
 }
 
 function newSession(){
-  if(!confirm('Start a new session? This clears votes & who voted (attendance kept).')) return;
+  if(!confirm('Start a new session? This clears votes & who voted.')) return;
   votes = {}; votedInitials = [];
   saveVotes(votes); saveVoted(votedInitials);
-  renderTeamView(); renderVote(); renderResults();
+  setPhase('not_started');
   $('#adminMsg').textContent = 'Session cleared.';
+  renderTeam(); renderVote(); renderMd(); renderPhase();
 }
 
-function toggleClosed(){
-  setClosed(!isClosed());
-  renderAdmin();
-  $('#adminMsg').textContent = isClosed() ? 'Voting closed.' : 'Voting open.';
+function exportCsv(){
+  const rows = [['Initials','Name','Votes']];
+  for(const t of teamMembers){ rows.push([t.initials, t.name, String(votes[t.initials]||0)]); }
+  const csv = rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'blacfox-star-player.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
 /* =========================
    Events & Init
 ========================= */
 $$('nav .btn[data-view]').forEach(b=> b.addEventListener('click', e=> showView(e.target.getAttribute('data-view'))));
-$('#revealBtn').addEventListener('click', revealWinner);
+// MD buttons
+$('#btnStart').addEventListener('click', mdStartVoting);
+$('#btnReveal').addEventListener('click', mdReveal);
+
+// Vote events
+$('#confirmIdentity').addEventListener('click', confirmIdentity);
+$('#clearIdentity').addEventListener('click', clearIdentity);
 $('#submitVote').addEventListener('click', voteSubmit);
 $('#clearPick').addEventListener('click', clearPick);
-$('#adminBtn').addEventListener('click', openAdmin);
-$('#pwCancel').addEventListener('click', closeAdminModal);
-$('#pwOk').addEventListener('click', checkAdminPassword);
+
+// Admin nav visibility depends on identity (handled in updateNav)
+$('#adminNav').addEventListener('click', ()=> showView('admin'));
+
+// Admin actions
 $('#saveTeam').addEventListener('click', saveTeamFromArea);
 $('#resetSession').addEventListener('click', newSession);
 $('#exportCsv').addEventListener('click', exportCsv);
-$('#closeVoting').addEventListener('click', toggleClosed);
 
-function firstInit(){
-  // Coerce any old storage into new format
+// First render
+(function init(){
   saveTeam(teamMembers); saveVotes(votes); saveVoted(votedInitials);
-  showView('home');
-  renderHome(); renderTeamView(); renderVote(); renderResults();
-}
-firstInit();
+  updateNav();
+  renderPhase();
+  renderTeam();
+  renderMd();
+  renderVote();
+  showView('team'); // default to TV page
+})();
 </script>
 </body>
 </html>
-

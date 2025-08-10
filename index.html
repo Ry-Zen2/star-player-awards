@@ -5,12 +5,24 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Blacfox • Star Player</title>
 <meta name="color-scheme" content="dark" />
+<meta name="theme-color" content="#ff7a00">
+<!-- Social share -->
+<meta property="og:title" content="Blacfox • Star Player" />
+<meta property="og:description" content="Vote, reveal, celebrate: the Blacfox Star Player mini-app." />
+<meta property="og:type" content="website" />
+<meta property="og:image" content="logo.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Blacfox • Star Player" />
+<meta name="twitter:description" content="Vote, reveal, celebrate: the Blacfox Star Player mini-app." />
+<meta name="twitter:image" content="logo.png" />
+
 <style>
   :root{
     --bg:#0a0a0c; --panel:#111214; --panel2:#0e0f11;
     --ink:#f0f0f2; --muted:#b6b8bd;
     --accent:#ff7a00; --accent-rgb:255,122,0;
     --ok:#35d07f; --warn:#ffd166; --err:#ef476f;
+    --gx:50%; --gy:50%; /* cursor glow */
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -23,7 +35,7 @@
     font:15px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     letter-spacing:.2px;
   }
-  /* terminal scanlines + vignette */
+  /* scanlines + vignette */
   body::before{
     content:""; position:fixed; inset:0; pointer-events:none;
     background:repeating-linear-gradient(180deg, rgba(255,255,255,.02) 0 2px, transparent 2px 4px);
@@ -34,7 +46,33 @@
     background:radial-gradient(75% 75% at 50% 120%, rgba(0,0,0,.7), transparent 60%);
   }
 
+  /* Floating logo particles */
+  .particles{position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden}
+  .particle{
+    position:absolute; width:4px; height:4px; border-radius:50%;
+    background:rgba(255,255,255,.8); opacity:.6; filter:blur(.2px);
+    animation:floatUp linear infinite;
+  }
+  .particle.o{ background:rgba(var(--accent-rgb),.9); }
+  @keyframes floatUp{
+    from{ transform:translate3d(var(--x,0), 110vh,0) scale(var(--s,1)); opacity:.0 }
+    10%{opacity:.6}
+    to{ transform:translate3d(calc(var(--x,0) + var(--dx,0px)), -10vh,0) scale(var(--s,1)); opacity:0 }
+  }
+
   .wrap{position:relative; z-index:1; min-height:100%; display:flex; flex-direction:column}
+
+  /* Glitch intro */
+  .intro{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#000; z-index:9000}
+  .intro .txt{font:700 22px/1 ui-monospace; color:#fff}
+  .intro.hide{animation:introOut .2s forwards}
+  @keyframes introOut{ to{opacity:0; visibility:hidden} }
+  .glitch{ position:relative; }
+  .glitch::before,.glitch::after{
+    content:attr(data-text); position:absolute; left:0; top:0; width:100%; overflow:hidden; clip-path:inset(0 0 50% 0);
+  }
+  .glitch::before{ color:#ff7a00; transform:translate(2px,0); }
+  .glitch::after{ color:#00ffd5; transform:translate(-2px,0); clip-path:inset(50% 0 0 0); }
 
   header{
     position:sticky; top:0; z-index:10;
@@ -49,6 +87,8 @@
   .brand h1 .dot{color:var(--accent)}
   .who{margin-left:8px; color:var(--muted); font-size:13px}
   .who a{color:var(--muted); text-decoration:underline dotted; cursor:pointer}
+  .caret{animation:blink 1.1s steps(1,end) infinite}
+  @keyframes blink{50%{opacity:0}}
 
   nav{margin-left:auto; display:flex; gap:8px; flex-wrap:wrap}
   .btn{
@@ -63,10 +103,15 @@
 
   main{flex:1; max-width:1100px; margin:18px auto 40px; padding:0 16px}
   .panel{
-    background:conic-gradient(from 180deg at 110% -10%, rgba(var(--accent-rgb),.09), transparent 18%) , var(--panel);
+    background:
+      radial-gradient(250px 180px at var(--gx) var(--gy), rgba(var(--accent-rgb),.06), transparent 60%),
+      conic-gradient(from 180deg at 110% -10%, rgba(var(--accent-rgb),.09), transparent 18%),
+      var(--panel);
     border:1px solid rgba(255,255,255,.08);
     border-radius:16px; padding:18px; margin:14px 0; box-shadow:0 12px 30px rgba(0,0,0,.25);
+    transition:box-shadow .2s;
   }
+  .panel:hover{ box-shadow:0 14px 34px rgba(0,0,0,.35), 0 0 0 1px rgba(var(--accent-rgb),.18) inset; }
   .panel h2{margin:0 0 10px 0; font-size:18px; letter-spacing:.5px}
   .sub{color:var(--muted); margin-top:-2px; margin-bottom:14px}
 
@@ -101,9 +146,8 @@
   .pill.idle{background:rgba(255,255,255,.07); color:#ddd}
   .pill.closed{background:rgba(53,208,127,.15); color:#c9f3df; border-color:rgba(53,208,127,.45)}
   #phaseText.typing::after{content:"…"; animation:ellipsis 1.2s infinite}
-
-  @keyframes pulse{ 0%{transform:scale(1)} 50%{transform:scale(1.04)} 100%{transform:scale(1)} }
-  @keyframes ellipsis{ 0%{content:"."} 33%{content:".."} 66%{content:"..."} 100%{content:"."} }
+  @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.04)}100%{transform:scale(1)}}
+  @keyframes ellipsis{0%{content:"."}33%{content:".."}66%{content:"..."}100%{content:"."}}
 
   /* MD mini-panel (only KG) */
   .md-panel{
@@ -111,6 +155,10 @@
     padding:10px; border-radius:12px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.12)
   }
   .md-panel .stat{padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); color:var(--muted); font-weight:800}
+
+  /* QR card */
+  .qrbox{ position:absolute; right:16px; top:16px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px; z-index:2 }
+  .qrbox.fade{ opacity:0; transition:opacity .4s ease; }
 
   /* Drumroll overlay */
   .drumroll{
@@ -125,24 +173,33 @@
   .winner-reveal{display:flex; flex-direction:column; align-items:center; gap:8px}
   .winner-title{font-size:22px; color:var(--muted); text-transform:uppercase; letter-spacing:3px}
   .winner-name{font-size:36px; font-weight:900; padding:8px 14px; border-radius:12px; background:rgba(255,255,255,.06); outline:1px solid rgba(255,255,255,.15)}
-  .confetti{position:fixed; pointer-events:none; z-index:6000; width:8px; height:14px; opacity:.95}
+  .co{ color:#ffd166; font-weight:800; letter-spacing:2px; text-transform:uppercase; }
 
-  /* Identity modal */
+  .confetti{position:fixed; pointer-events:none; z-index:6000; width:8px; height:14px; opacity:.95}
   .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.75); z-index:4500; backdrop-filter:blur(2px)}
   .modal.active{display:flex}
   .modal-card{background:#111; border:1px solid rgba(var(--accent-rgb),.35); border-radius:14px; width:min(440px,92vw); padding:18px; box-shadow:0 10px 30px rgba(0,0,0,.6)}
   .modal-title{margin:0 0 10px 0; font-size:18px; color:var(--accent)}
   .modal-actions{display:flex; gap:10px; margin-top:10px}
+
   .hide{display:none !important}
 </style>
 </head>
 <body>
+<!-- 200ms glitch intro -->
+<div class="intro" id="intro">
+  <div class="txt glitch" data-text="Blacfox Terminal">Blacfox Terminal</div>
+</div>
+
+<!-- Floating particles -->
+<div class="particles" id="particles"></div>
+
 <div class="wrap">
   <header>
     <div class="topbar">
       <div class="brand">
         <img src="logo.png" alt="Blacfox logo" />
-        <h1>Blacfox <span class="dot">•</span> Star Player</h1>
+        <h1>Blacfox <span class="dot">•</span> Star Player <span class="caret">_</span></h1>
         <div class="who" id="whoAmIText"></div>
       </div>
       <nav>
@@ -155,8 +212,15 @@
 
   <main>
     <!-- TEAM VIEW -->
-    <section id="view-team" class="panel">
-      <h2>Team View</h2>
+    <section id="view-team" class="panel" onmousemove="setGlow(event)">
+      <h2>Team View <span class="caret">_</span></h2>
+
+      <!-- QR to Vote -->
+      <div class="qrbox" id="qrBox">
+        <div id="qr"></div>
+        <div class="muted" style="font-size:12px;margin-top:6px;text-align:center">Scan to vote</div>
+      </div>
+
       <div id="phaseBanner" class="phase">
         <span id="phasePill" class="pill idle">Waiting</span>
         <span id="phaseText" class="muted">Waiting to begin…</span>
@@ -167,13 +231,14 @@
         <span class="stat">Votes: <b id="mdVotes">0</b></span>
         <button class="btn small accent hide" id="btnStart">Start Voting</button>
         <button class="btn small accent hide" id="btnReveal">Reveal Winner</button>
+        <button class="btn small accent hide" id="btnCloseReveal">Close & Reveal Now</button>
       </div>
 
       <div class="sep"></div>
 
       <div class="grid cols-2">
-        <div class="panel">
-          <h3>Attendance</h3>
+        <div class="panel" onmousemove="setGlow(event)">
+          <h3>Attendance <span class="caret">_</span></h3>
           <div class="row">
             <div class="chip"><span>👥</span><span id="t-total">0</span>&nbsp;Total</div>
             <div class="chip ok"><span>🟢</span><span id="t-present">0</span>&nbsp;Present</div>
@@ -187,8 +252,8 @@
           </table>
         </div>
 
-        <div class="panel">
-          <h3 id="resultsTitle">Results</h3>
+        <div class="panel" onmousemove="setGlow(event)">
+          <h3 id="resultsTitle">Results <span class="caret">_</span></h3>
           <div id="resultsHint" class="muted">Results are hidden until the winner is revealed.</div>
           <div id="teamBars" class="hide"></div>
         </div>
@@ -196,12 +261,12 @@
     </section>
 
     <!-- VOTE -->
-    <section id="view-vote" class="panel hide">
-      <h2>Vote</h2>
+    <section id="view-vote" class="panel hide" onmousemove="setGlow(event)">
+      <h2>Vote <span class="caret">_</span></h2>
       <div class="sub">Confirm identity once (per browser tab). Then pick a teammate (not yourself), <strong>Confirm</strong> the choice, and <strong>Submit</strong>.</div>
 
       <div class="grid cols-2">
-        <div class="panel">
+        <div class="panel" onmousemove="setGlow(event)">
           <h3>Identity</h3>
           <div id="idStatus" class="muted">Not set</div>
           <div class="row" style="margin-top:10px">
@@ -210,7 +275,7 @@
           </div>
         </div>
 
-        <div class="panel" id="votePanel">
+        <div class="panel" id="votePanel" onmousemove="setGlow(event)">
           <h3>Ballot</h3>
           <div id="voteGuard" class="muted">Confirm your identity to proceed.</div>
           <div id="voteForm" class="hide">
@@ -227,23 +292,23 @@
     </section>
 
     <!-- ADMIN (only ZS) -->
-    <section id="view-admin" class="panel hide">
-      <h2>Admin</h2>
+    <section id="view-admin" class="panel hide" onmousemove="setGlow(event)">
+      <h2>Admin <span class="caret">_</span></h2>
       <div class="sub">Team & session controls (visible only when the confirmed user is <strong>ZS</strong>).</div>
 
       <div class="grid cols-2">
-        <div class="panel">
+        <div class="panel" onmousemove="setGlow(event)">
           <h3>Team Members</h3>
           <label for="teamArea">Format: <code>Full Name - XX</code> per line</label>
           <textarea id="teamArea" spellcheck="false"></textarea>
           <div class="row" style="margin-top:10px">
             <button class="btn accent" id="saveTeam">Save Team</button>
-            <button class="btn" id="resetSession">New Session</button>
+            <button class="btn" id="resetSession">New Day</button>
           </div>
           <p class="muted" style="margin-top:8px">Changes save to this device (localStorage).</p>
         </div>
 
-        <div class="panel">
+        <div class="panel" onmousemove="setGlow(event)">
           <h3>Attendance</h3>
           <div id="adminAttendance"></div>
           <div class="sep"></div>
@@ -268,6 +333,9 @@
   </div>
 </div>
 
+<!-- Lightweight QR library (CDN). Graceful fallback included in JS. -->
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+
 <script>
 /* =========================
    Data & Storage
@@ -280,7 +348,7 @@ const LS = {
   phase:'bf_phase'       // 'not_started' | 'open' | 'revealed'
 };
 
-// Default team (your list)
+// Default team
 const DEFAULT_MEMBERS = [
   {name:'Olwethu',     initials:'OB', status:'absent'},
   {name:'Christopher', initials:'CB', status:'absent'},
@@ -327,17 +395,19 @@ let votedInitials = loadVoted();  // ["JV","KG",...]
 let pendingPick = '';             // vote confirmation step
 
 /* =========================
-   Utilities
+   Utilities & UI sugar
 ========================= */
 const $  = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
+
 function showView(id){
   $$('main > section').forEach(s=>s.classList.add('hide'));
   $('#view-'+id).classList.remove('hide');
-  if(id==='team'){ renderTeam(); renderMd(); renderPhase(); }
+  if(id==='team'){ renderTeam(); renderMd(); renderPhase(); ensureQr(); }
   if(id==='vote'){ renderVote(); }
   if(id==='admin'){ renderAdmin(); }
 }
+
 function resultsData(){
   return teamMembers
     .map(m=>({ name:m.name, initials:m.initials, votes: Number(votes[m.initials]||0) }))
@@ -346,9 +416,10 @@ function resultsData(){
 function tallies(){
   const total   = teamMembers.length;
   const present = teamMembers.filter(m=>m.status==='present').length;
+  const eligible = teamMembers.filter(m=>m.status==='present' && m.initials!=='KG').length; // exclude KG
   const absent  = total - present;
   const voted   = new Set(votedInitials).size;
-  return {total, present, absent, voted};
+  return {total, present, eligible, absent, voted};
 }
 function updateNav(){
   const u = getUser();
@@ -363,6 +434,15 @@ function updateNav(){
 
   // attach change handler
   const link = $('#changeId'); if(link) link.addEventListener('click', (e)=>{ e.preventDefault(); openIdentityModal(); });
+}
+
+/* Cursor glow for neon borders */
+function setGlow(e){
+  const r = e.currentTarget.getBoundingClientRect();
+  const x = ((e.clientX - r.left) / r.width) * 100;
+  const y = ((e.clientY - r.top) / r.height) * 100;
+  e.currentTarget.style.setProperty('--gx', x+'%');
+  e.currentTarget.style.setProperty('--gy', y+'%');
 }
 
 /* =========================
@@ -425,23 +505,52 @@ function renderMd(){
   $('#mdPanel').classList.toggle('hide', !isKG);
   if(!isKG) return;
 
-  const {present, voted} = tallies();
+  const {present, eligible, voted} = tallies();
   $('#mdPresent').textContent = present;
   $('#mdVotes').textContent = voted;
 
   const phase = getPhase();
-  $('#btnStart').classList.toggle('hide', phase!=='not_started');
-  $('#btnReveal').classList.toggle('hide', phase!=='open');
+  const btnStart = $('#btnStart');
+  const btnReveal = $('#btnReveal');
+  const btnCloseReveal = $('#btnCloseReveal');
+
+  btnStart.classList.toggle('hide', phase!=='not_started');
+  btnReveal.classList.toggle('hide', phase!=='open');
+
+  // Auto-close suggestion
+  const shouldSuggest = phase==='open' && voted >= Math.max(0, eligible - 1); // "-1" excludes last possible straggler (KG can't vote anyway)
+  btnCloseReveal.classList.toggle('hide', !shouldSuggest);
 }
 
 /* Start + Reveal (KG only) */
 function mdStartVoting(){ setPhase('open'); }
 function mdReveal(){
   setPhase('revealed'); // stop further votes
+  // fade out QR
+  const qr = $('#qrBox'); if(qr) qr.classList.add('fade');
   revealOverlay();
 }
+function mdCloseRevealNow(){ mdReveal(); }
 
-/* 10s overlay */
+/* QR to Vote */
+function ensureQr(){
+  const holder = $('#qr');
+  if(!holder) return;
+  holder.innerHTML = '';
+  const url = (location.href.split('#')[0] || location.href) + '#view-vote';
+  try{
+    if(window.QRCode){
+      new QRCode(holder, {text:url, width:128, height:128, correctLevel: QRCode.CorrectLevel.M});
+    }else{
+      // Fallback: simple link if CDN blocked
+      holder.innerHTML = '<a href="#view-vote" class="muted" style="font-size:12px">Open Vote</a>';
+    }
+  }catch(e){
+    holder.innerHTML = '<a href="#view-vote" class="muted" style="font-size:12px">Open Vote</a>';
+  }
+}
+
+/* 10s overlay + co-winner handling */
 function revealOverlay(){
   const data = resultsData();
   const top = Math.max(0, ...data.map(d=>d.votes));
@@ -475,22 +584,35 @@ function revealOverlay(){
     overlay.style.transform = remain%2===0 ? 'translateY(-2px)' : 'translateY(0)';
     if(remain <= 0){
       clearInterval(tick);
+      const co = winners.length > 1;
+      const title = co ? '<div class="winner-title co">Co-Winners</div>' : '<div class="winner-title">Star Player</div>';
       overlay.innerHTML = `
         <div class="winner-reveal">
-          <div class="winner-title">Star Player</div>
-          <div class="winner-name">${winners.map(w=>w.name).join(' & ')}</div>
+          ${title}
+          <div class="winner-name">${winners.map(w=>w.name).join(co ? ' • ' : ' & ')}</div>
         </div>
       `;
-      for(let i=0;i<150;i++) spawnConfetti();
+      // Split confetti columns if co-winners
+      if(co){
+        for(let i=0;i<120;i++) spawnConfetti({half:i%2===0?'left':'right'});
+      }else{
+        for(let i=0;i<150;i++) spawnConfetti();
+      }
       setTimeout(()=>overlay.remove(), 6000);
     }
   },1000);
 }
-function spawnConfetti(){
+
+function spawnConfetti(opts={}){
   const el = document.createElement('div');
   el.className='confetti';
   const colors = ['#ffffff','#ffe8cc','#ffb26a','#ff7a00','#ffd166'];
-  const left = Math.random()*100;
+  const half = opts.half || 'full';
+  let left;
+  if(half==='left')  left = Math.random()*45;
+  else if(half==='right') left = 55 + Math.random()*45;
+  else left = Math.random()*100;
+
   const size = 6 + Math.random()*8;
   const rot = Math.random()*360;
   const dur = 3 + Math.random()*2;
@@ -505,7 +627,8 @@ function spawnConfetti(){
   document.body.appendChild(el);
   requestAnimationFrame(()=>{
     el.style.top = '110vh';
-    el.style.transform = `translateX(${(Math.random()*2-1)*120}px) rotate(${rot + 600}deg)`;
+    const dir = half==='left' ? (20+Math.random()*60) : half==='right' ? -(20+Math.random()*60) : ((Math.random()*2-1)*120);
+    el.style.transform = `translateX(${dir}px) rotate(${rot + 600}deg)`;
     el.style.opacity = .1;
   });
   setTimeout(()=> el.remove(), dur*1000+500);
@@ -516,14 +639,11 @@ function spawnConfetti(){
 ========================= */
 function renderVote(){
   const u = getUser();
-  // identity status
   $('#idStatus').textContent = u ? (u==='OBSERVER' ? 'Confirmed as Observer' : `Confirmed as ${u}`) : 'Not set';
 
-  // guard
   $('#voteGuard').classList.toggle('hide', !!u);
   $('#voteForm').classList.toggle('hide', !u);
 
-  // Observer & KG cannot vote
   if(u==='OBSERVER'){
     $('#voteGuard').textContent = 'Observer mode: voting unavailable.';
     $('#voteForm').classList.add('hide');
@@ -572,7 +692,6 @@ function voteConfirmStep(){
   if(!sel){ msg.textContent='Select your pick.'; return; }
   if(sel===u){ msg.textContent='Self-votes are not allowed.'; return; }
 
-  // ensure pick is PRESENT
   const pickRec = teamMembers.find(t=>t.initials===sel && t.status==='present');
   if(!pickRec){ msg.textContent='Selected teammate is not currently marked present.'; return; }
 
@@ -589,17 +708,15 @@ function voteSubmit(){
   if(votedInitials.includes(u)){ msg.textContent='You have already voted.'; return; }
   if(!pendingPick){ msg.textContent='Please confirm your selection first.'; return; }
 
-  // apply vote (anonymous: store only totals + that you voted)
   votes[pendingPick] = (votes[pendingPick]||0) + 1;
   votedInitials.push(u);
   saveVotes(votes); saveVoted(votedInitials);
 
   msg.textContent = 'Vote recorded. Thank you!';
   $('#submitVote').disabled = true;
-  // small celebration
   for(let i=0;i<25;i++) spawnConfetti();
 
-  renderTeam(); renderMd(); // update tallies for TV/KG
+  renderTeam(); renderMd();
 }
 
 function clearPick(){
@@ -613,7 +730,6 @@ function clearPick(){
    Identity modal
 ========================= */
 function openIdentityModal(){
-  // populate list (Observer + team)
   const idSel = $('#idSelect');
   const u = getUser();
   const opts = [
@@ -625,16 +741,13 @@ function openIdentityModal(){
   $('#idModal').classList.add('active');
 }
 function closeIdentityModal(){ $('#idModal').classList.remove('active'); }
-
 function confirmIdentity(){
   const val = $('#idSelect').value.trim().toUpperCase();
   if(!val){ return; }
 
   if(val==='OBSERVER'){
-    // Observer: no attendance change
     setUser('OBSERVER');
   }else{
-    // Mark attendance present
     const rec = teamMembers.find(t=>t.initials===val);
     if(!rec){ return; }
     rec.status = 'present';
@@ -643,7 +756,7 @@ function confirmIdentity(){
   }
 
   updateNav();
-  renderTeam(); renderMd(); renderVote();
+  renderTeam(); renderMd(); renderVote(); ensureQr();
   closeIdentityModal();
 }
 
@@ -658,30 +771,29 @@ function renderAdmin(){
   }
   // restore layout (in case access just granted)
   $('#view-admin').innerHTML = `
-    <h2>Admin</h2>
+    <h2>Admin <span class="caret">_</span></h2>
     <div class="sub">Team & session controls (visible only when the confirmed user is <strong>ZS</strong>).</div>
     <div class="grid cols-2">
-      <div class="panel">
+      <div class="panel" onmousemove="setGlow(event)">
         <h3>Team Members</h3>
         <label for="teamArea">Format: <code>Full Name - XX</code> per line</label>
         <textarea id="teamArea" spellcheck="false"></textarea>
         <div class="row" style="margin-top:10px">
           <button class="btn accent" id="saveTeam">Save Team</button>
-          <button class="btn" id="resetSession">New Session</button>
+          <button class="btn" id="resetSession">New Day</button>
         </div>
         <p class="muted" style="margin-top:8px">Changes save to this device (localStorage).</p>
       </div>
-      <div class="panel">
+      <div class="panel" onmousemove="setGlow(event)">
         <h3>Attendance</h3>
         <div id="adminAttendance"></div>
         <div class="sep"></div>
         <div id="adminMsg" class="muted" style="margin-top:10px"></div>
       </div>
     </div>`;
-  // set textarea
+
   $('#teamArea').value = teamMembers.map(m=>`${m.name} - ${m.initials}`).join('\n');
 
-  // attendance toggles
   const tgt = $('#adminAttendance');
   tgt.innerHTML = teamMembers.map((m,idx)=>{
     const checked = m.status==='present' ? 'checked' : '';
@@ -699,7 +811,6 @@ function renderAdmin(){
     });
   });
 
-  // rebind admin buttons
   $('#saveTeam').addEventListener('click', saveTeamFromArea);
   $('#resetSession').addEventListener('click', newSession);
 }
@@ -718,16 +829,17 @@ function saveTeamFromArea(){
   votes = {}; votedInitials = [];
   saveVotes(votes); saveVoted(votedInitials);
   $('#adminMsg').textContent = 'Team saved. Session reset.';
-  renderTeam(); renderVote(); renderMd(); renderPhase();
+  renderTeam(); renderVote(); renderMd(); renderPhase(); ensureQr();
 }
 
+/* "New Day": clears votes & phase; keeps team & attendance */
 function newSession(){
-  if(!confirm('Start a new session? This clears votes & who voted.')) return;
+  if(!confirm('Start a new day? This clears votes & who voted, keeps team & attendance.')) return;
   votes = {}; votedInitials = [];
   saveVotes(votes); saveVoted(votedInitials);
   setPhase('not_started');
-  $('#adminMsg').textContent = 'Session cleared.';
-  renderTeam(); renderVote(); renderMd(); renderPhase();
+  $('#adminMsg').textContent = 'New day started.';
+  renderTeam(); renderVote(); renderMd(); renderPhase(); ensureQr();
 }
 
 /* =========================
@@ -737,10 +849,11 @@ $$('nav .btn[data-view]').forEach(b=> b.addEventListener('click', e=> showView(e
 // KG controls
 $('#btnStart').addEventListener('click', mdStartVoting);
 $('#btnReveal').addEventListener('click', mdReveal);
+$('#btnCloseReveal').addEventListener('click', mdCloseRevealNow);
 
 // Vote events
 $('#openIdentity').addEventListener('click', openIdentityModal);
-$('#clearIdentity').addEventListener('click', ()=>{ setUser(''); renderVote(); renderMd(); updateNav(); });
+$('#clearIdentity').addEventListener('click', ()=>{ setUser(''); renderVote(); renderMd(); updateNav(); ensureQr(); });
 $('#confirmVote').addEventListener('click', voteConfirmStep);
 $('#submitVote').addEventListener('click', voteSubmit);
 
@@ -748,16 +861,44 @@ $('#submitVote').addEventListener('click', voteSubmit);
 $('#idCancel').addEventListener('click', closeIdentityModal);
 $('#idOk').addEventListener('click', confirmIdentity);
 
+// Particles
+function initParticles(){
+  const p = $('#particles'); if(!p) return;
+  const N = 28;
+  for(let i=0;i<N;i++){
+    const s = document.createElement('span');
+    s.className = 'particle' + (Math.random()<.45 ? ' o':'');
+    const x = Math.floor(Math.random()*100);
+    s.style.setProperty('--x', x+'vw');
+    s.style.setProperty('--dx', (Math.random()*40-20)+'px');
+    s.style.setProperty('--s', (0.6 + Math.random()*0.9).toFixed(2));
+    s.style.animationDuration = (8 + Math.random()*8).toFixed(2)+'s';
+    s.style.animationDelay = (-Math.random()*8).toFixed(2)+'s';
+    p.appendChild(s);
+  }
+}
+
+// 200ms intro
+function killIntro(){ const i = $('#intro'); if(i){ i.classList.add('hide'); setTimeout(()=>i.remove(), 220); } }
+
+// QR boot
+function bootQr(){ try{ ensureQr(); }catch(_){} }
+
 // First render
 (function init(){
-  // persist whatever exists
   saveTeam(teamMembers); saveVotes(votes); saveVoted(votedInitials);
   updateNav();
   renderPhase(); renderTeam(); renderMd(); renderVote();
   showView('team'); // default to TV
 
+  initParticles();
+  bootQr();
+
   // auto-prompt identity on first visit of this tab (session)
   if(!getUser()) openIdentityModal();
+
+  // kill intro quickly
+  setTimeout(killIntro, 200);
 })();
 </script>
 </body>

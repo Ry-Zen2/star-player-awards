@@ -19,6 +19,10 @@
 <meta name="twitter:description" content="Vote, reveal, celebrate: the Blacfox Star Player mini-app." />
 <meta name="twitter:image" content="logo.png" />
 
+<!-- Firebase (compat builds, simplest for a single file) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <style>
   :root{
     --bg:#0a0a0c; --panel:#111214; --panel2:#0e0f11;
@@ -60,31 +64,24 @@
     background:radial-gradient(75% 75% at 50% 120%, rgba(0,0,0,.7), transparent 60%);
   }
 
-  /* Floating logo particles */
+  /* 5s Terminal loading screen */
+  .boot{position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; background:#000; color:#fff}
+  .glitch{ position:relative; font:700 22px/1 ui-monospace }
+  .glitch::before,.glitch::after{content:attr(data-text); position:absolute; left:0; top:0}
+  .glitch::before{ color:#ff7a00; transform:translate(2px,0) }
+  .glitch::after{ color:#00ffd5; transform:translate(-2px,0) }
+  .spinner{ width:36px; height:36px; border-radius:50%; border:3px solid rgba(255,255,255,.25); border-top-color:#fff; animation:spin 1s linear infinite }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .boot.hide{animation:fadeOut .35s ease forwards}
+  @keyframes fadeOut{to{opacity:0; visibility:hidden}}
+
+  /* Floating particles */
   .particles{position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden}
-  .particle{
-    position:absolute; width:4px; height:4px; border-radius:50%;
-    background:rgba(255,255,255,.8); opacity:.6; filter:blur(.2px);
-    animation:floatUp linear infinite;
-  }
+  .particle{ position:absolute; width:4px; height:4px; border-radius:50%; background:rgba(255,255,255,.8); opacity:.6; filter:blur(.2px); animation:floatUp linear infinite }
   .particle.o{ background:rgba(var(--accent-rgb),.9); }
-  @keyframes floatUp{
-    from{ transform:translate3d(var(--x,0), 110vh,0) scale(var(--s,1)); opacity:.0 }
-    10%{opacity:.6}
-    to{ transform:translate3d(calc(var(--x,0) + var(--dx,0px)), -10vh,0) scale(var(--s,1)); opacity:0 }
-  }
+  @keyframes floatUp{ from{ transform:translate3d(var(--x,0), 110vh,0) scale(var(--s,1)); opacity:.0 } 10%{opacity:.6} to{ transform:translate3d(calc(var(--x,0) + var(--dx,0px)), -10vh,0) scale(var(--s,1)); opacity:0 } }
 
   .wrap{position:relative; z-index:1; min-height:100%; display:flex; flex-direction:column}
-
-  /* Glitch intro */
-  .intro{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#000; z-index:9000}
-  .intro .txt{font:700 22px/1 ui-monospace; color:#fff}
-  .intro.hide{animation:introOut .2s forwards}
-  @keyframes introOut{ to{opacity:0; visibility:hidden} }
-  .glitch{ position:relative; }
-  .glitch::before,.glitch::after{content:attr(data-text); position:absolute; left:0; top:0; width:100%; overflow:hidden; clip-path:inset(0 0 50% 0);}
-  .glitch::before{ color:#ff7a00; transform:translate(2px,0); }
-  .glitch::after{ color:#00ffd5; transform:translate(-2px,0); clip-path:inset(50% 0 0 0); }
 
   header{
     position:sticky; top:0; z-index:10;
@@ -192,13 +189,17 @@
 </style>
 </head>
 <body>
-<!-- 200ms glitch intro -->
-<div class="intro" id="intro"><div class="txt glitch" data-text="Blacfox Terminal">Blacfox Terminal</div></div>
+<!-- 5s Terminal boot screen with spinner -->
+<div class="boot" id="boot">
+  <div class="glitch" data-text="Blacfox Terminal">Blacfox Terminal</div>
+  <div class="spinner" aria-label="Loading"></div>
+  <div style="font:12px ui-monospace; opacity:.7">initializing session…</div>
+</div>
 
 <!-- Floating particles -->
 <div class="particles" id="particles"></div>
 
-<div class="wrap">
+<div class="wrap" aria-live="polite">
   <header id="appHeader">
     <div class="topbar">
       <div class="brand">
@@ -223,7 +224,7 @@
 
       <h2>Team View <span class="caret">_</span></h2>
 
-      <!-- QR to Vote -->
+      <!-- QR to Vote (includes session code) -->
       <div class="qrbox" id="qrBox">
         <div id="qr"></div>
         <div class="muted" style="font-size:12px;margin-top:6px;text-align:center">Scan to vote</div>
@@ -240,6 +241,14 @@
         <button class="btn small accent hide" id="btnStart">Start Voting</button>
         <button class="btn small accent hide" id="btnReveal">Reveal Winner</button>
         <button class="btn small accent hide" id="btnCloseReveal">Close & Reveal Now</button>
+        <!-- PIN controls (KG only) -->
+        <span id="pinPanel" class="hide" style="display:flex; align-items:center; gap:8px;">
+          <label class="muted" style="display:flex; align-items:center; gap:6px">
+            <input type="checkbox" id="pinEnable" /> Require PIN
+          </label>
+          <button class="btn small" id="pinGenerate">New PIN</button>
+          <span class="chip" id="pinValue" title="Share this PIN with voters"></span>
+        </span>
       </div>
 
       <div class="sep"></div>
@@ -299,7 +308,7 @@
       </div>
     </section>
 
-    <!-- ADMIN (only ZS) -->
+    <!-- ADMIN (ZS only) -->
     <section id="view-admin" class="panel hide" onmousemove="setGlow(event)">
       <h2>Admin <span class="caret">_</span></h2>
       <div class="sub">Visible only when you’re <strong>ZS</strong>.</div>
@@ -313,7 +322,7 @@
             <button class="btn accent" id="saveTeam">Save Team</button>
             <button class="btn" id="resetSession">New Day</button>
           </div>
-          <p class="muted" style="margin-top:8px">Saves locally on this device.</p>
+          <p class="muted" style="margin-top:8px">Saves to the session (realtime sync) and locally for offline.</p>
 
           <div class="sep"></div>
           <label for="themeSelect">Theme</label>
@@ -322,6 +331,14 @@
             <option value="neon">Blacfox Neon</option>
             <option value="minimal">Blacfox Minimal</option>
           </select>
+
+          <div class="sep"></div>
+          <label for="sessionInput">Session code (all devices must match)</label>
+          <div class="row">
+            <input id="sessionInput" placeholder="e.g. fox123" />
+            <button class="btn" id="saveSessionCode">Use code</button>
+          </div>
+          <p class="muted" style="margin-top:6px">QR updates automatically.</p>
         </div>
 
         <div class="panel" onmousemove="setGlow(event)">
@@ -349,14 +366,50 @@
   </div>
 </div>
 
+<!-- PIN Modal (voters must pass if enabled) -->
+<div class="modal" id="pinModal" aria-hidden="true">
+  <div class="modal-card">
+    <h3 class="modal-title">Enter session PIN</h3>
+    <div class="row">
+      <input id="pinInput" inputmode="numeric" maxlength="6" placeholder="4–6 digits" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="pinCancel">Cancel</button>
+      <button class="btn accent" id="pinOk">Unlock voting</button>
+    </div>
+    <p class="muted" id="pinMsg" style="margin-top:8px"></p>
+  </div>
+</div>
+
 <!-- QR library (with fallback) -->
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
 
 <script>
-/* STORAGE KEYS */
-const LS = { team:'bf_team', votes:'bf_votes', voted:'bf_voted_by', user:'bf_current_user', phase:'bf_phase', theme:'bf_theme' };
+/* =========================
+   CONFIG: paste your Firebase config here.
+   You can also pass ?s=fox123 in the URL to set the session code.
+========================= */
+window.BF_SYNC = {
+  provider: 'firebase',
+  // Will be overridden by ?s= param or Admin panel, but having a default helps first boot:
+  sessionId: 'demo',
+  firebaseConfig: {
+    // TODO: PASTE your firebaseConfig from Firebase Console here:
+    // apiKey: "…",
+    // authDomain: "…",
+    // databaseURL: "https://<your-db>.firebaseio.com",
+    // projectId: "…",
+    // storageBucket: "…",
+    // messagingSenderId: "…",
+    // appId: "…"
+  }
+};
 
-/* DEFAULT TEAM */
+/* =========================
+   Storage keys & defaults
+========================= */
+const LS = { team:'bf_team', votes:'bf_votes', voted:'bf_voted_by', user:'bf_current_user', phase:'bf_phase', theme:'bf_theme', session:'bf_session', pinok:'bf_pinok_' };
+
 const DEFAULT_MEMBERS = [
   {name:'Olwethu',     initials:'OB', status:'absent'},
   {name:'Christopher', initials:'CB', status:'absent'},
@@ -377,28 +430,126 @@ const DEFAULT_MEMBERS = [
   {name:'Brendon',     initials:'BS', status:'absent'},
 ];
 
-/* LOAD/SAVE */
-function loadTeam(){ const raw = localStorage.getItem(LS.team); const t = raw?JSON.parse(raw):DEFAULT_MEMBERS.slice(); return t.map(m=>({name:''+m.name, initials:(''+m.initials).toUpperCase(), status:m.status==='present'?'present':'absent'})); }
-function saveTeam(t){ localStorage.setItem(LS.team, JSON.stringify(t)); }
-function loadVotes(){ return JSON.parse(localStorage.getItem(LS.votes)||'{}'); }
-function saveVotes(v){ localStorage.setItem(LS.votes, JSON.stringify(v)); }
-function loadVoted(){ return JSON.parse(localStorage.getItem(LS.voted)||'[]'); }
-function saveVoted(a){ localStorage.setItem(LS.voted, JSON.stringify(a)); }
-/* session identity */
+/* =========================
+   Local mirrors (fallback/offline)
+========================= */
+function loadTeamLocal(){ const raw = localStorage.getItem(LS.team); const t = raw?JSON.parse(raw):DEFAULT_MEMBERS.slice(); return t.map(m=>({name:''+m.name, initials:(''+m.initials).toUpperCase(), status:m.status==='present'?'present':'absent'})); }
+function saveTeamLocal(t){ localStorage.setItem(LS.team, JSON.stringify(t)); }
+function loadVotesLocal(){ return JSON.parse(localStorage.getItem(LS.votes)||'{}'); }
+function saveVotesLocal(v){ localStorage.setItem(LS.votes, JSON.stringify(v)); }
+function loadVotedLocal(){ return JSON.parse(localStorage.getItem(LS.voted)||'[]'); }
+function saveVotedLocal(a){ localStorage.setItem(LS.voted, JSON.stringify(a)); }
+
 function getUser(){ return sessionStorage.getItem(LS.user) || ''; }
 function setUser(i){ if(i) sessionStorage.setItem(LS.user, i); else sessionStorage.removeItem(LS.user); updateNav(); }
-function getPhase(){ return localStorage.getItem(LS.phase) || 'not_started'; }
-function setPhase(p){ localStorage.setItem(LS.phase, p); renderPhase(); renderTeam(); renderMd(); renderVote(); }
-function loadTheme(){ return localStorage.getItem(LS.theme) || 'terminal'; }
-function saveTheme(t){ localStorage.setItem(LS.theme, t); }
 
-/* STATE */
-let teamMembers = loadTeam();
-let votes = loadVotes();
-let votedInitials = loadVoted();
+function getPhaseLocal(){ return localStorage.getItem(LS.phase) || 'not_started'; }
+function setPhaseLocal(p){ localStorage.setItem(LS.phase, p); renderPhase(); renderTeam(); renderMd(); renderVote(); }
+
+/* =========================
+   State (rendered)
+========================= */
+let teamMembers = loadTeamLocal();
+let votes = loadVotesLocal();
+let votedInitials = loadVotedLocal();
 let pendingPick = '';
+let sessionId = (new URLSearchParams(location.search).get('s')) || localStorage.getItem(LS.session) || (window.BF_SYNC && window.BF_SYNC.sessionId) || 'demo';
+localStorage.setItem(LS.session, sessionId);
 
-/* HELPERS */
+let sessionPin = '';        // from DB
+let pinEnabled = false;     // from DB
+
+/* =========================
+   Firebase Sync layer
+========================= */
+const SYNC = (()=>{
+  let enabled = false, app=null, db=null, rootRef=null;
+  const listeners = [];
+
+  function init(){
+    const cfg = window.BF_SYNC || {};
+    if(!cfg.firebaseConfig || !cfg.firebaseConfig.apiKey || !cfg.sessionId){ console.log('SYNC: No Firebase config; running local-only.'); return; }
+    try{ app = firebase.apps.length ? firebase.app() : firebase.initializeApp(cfg.firebaseConfig); }
+    catch(e){ console.warn('Firebase init:', e); }
+    db = firebase.database();
+    setSession(cfg.sessionId || 'demo');
+  }
+
+  function setSession(id){
+    detach();
+    sessionId = id || 'demo';
+    localStorage.setItem(LS.session, sessionId);
+    rootRef = db.ref('sessions/'+sessionId);
+    enabled = true;
+
+    // Attach listeners
+    attach(rootRef.child('phase'), s=> { if(s.exists()) setPhaseLocal(s.val()); });
+    attach(rootRef.child('team'),  s=> { teamMembers = s.val() || DEFAULT_MEMBERS.slice(); saveTeamLocal(teamMembers); renderTeam(); renderVote(); renderMd(); ensureQr(); });
+    attach(rootRef.child('votes'), s=> { votes = s.val() || {}; saveVotesLocal(votes); renderTeam(); renderMd(); });
+    attach(rootRef.child('votedBy'), s=> { votedInitials = Object.keys(s.val()||{}); saveVotedLocal(votedInitials); renderTeam(); renderMd(); renderVote(); });
+    attach(rootRef.child('pin'), s=> { sessionPin = (s.val() || '').toString(); updatePinUi(); });
+    attach(rootRef.child('pinEnabled'), s=> { pinEnabled = !!s.val(); updatePinUi(); renderVote(); });
+
+    // Ensure default tree exists (once)
+    rootRef.once('value').then(s=>{
+      if(!s.child('team').exists()) rootRef.child('team').set(teamMembers);
+      if(!s.child('votes').exists()) rootRef.child('votes').set(votes);
+      if(!s.child('votedBy').exists()) rootRef.child('votedBy').set({});
+      if(!s.child('phase').exists()) rootRef.child('phase').set(getPhaseLocal());
+      if(!s.child('pinEnabled').exists()) rootRef.child('pinEnabled').set(false);
+    }).catch(console.warn);
+  }
+
+  function attach(ref, fn){ ref.on('value', fn); listeners.push({ref, fn}); }
+  function detach(){ listeners.forEach(({ref, fn})=> ref.off('value', fn)); listeners.length=0; }
+
+  // Public ops
+  function setPhase(p){ if(!enabled) return setPhaseLocal(p); return rootRef.child('phase').set(p); }
+  function saveTeam(t){ if(!enabled){ saveTeamLocal(t); setTimeout(()=>{ renderTeam(); renderVote(); renderMd(); },0); return; } return rootRef.child('team').set(t); }
+  function markPresent(initials, present){
+    const idx = teamMembers.findIndex(m=>m.initials===initials);
+    if(idx>-1){ teamMembers[idx].status = present?'present':'absent'; }
+    return saveTeam(teamMembers);
+  }
+  function resetSession(keepAttendance){
+    if(!enabled){
+      votes={}; votedInitials=[]; saveVotesLocal(votes); saveVotedLocal(votedInitials); setPhaseLocal('not_started'); return;
+    }
+    const updates = {};
+    updates['votes'] = {};
+    updates['votedBy'] = {};
+    updates['phase'] = 'not_started';
+    if(!keepAttendance){
+      // (not needed now, we keep attendance for "New Day")
+    }
+    return rootRef.update(updates);
+  }
+  function generatePin(){
+    const pin = (''+Math.floor(1000 + Math.random()*9000)); // 4 digits
+    return rootRef.child('pin').set(pin);
+  }
+  function setPinEnabled(on){ return rootRef.child('pinEnabled').set(!!on); }
+  async function voteTransaction(voterInitials, pickInitials){
+    if(!enabled){
+      // local-only fallback
+      if(votedInitials.includes(voterInitials)) throw new Error('already_voted');
+      votes[pickInitials] = (votes[pickInitials]||0) + 1; votedInitials.push(voterInitials);
+      saveVotesLocal(votes); saveVotedLocal(votedInitials); renderTeam(); renderMd(); return;
+    }
+    // 1) Claim the voter's slot atomically
+    const claimRef = rootRef.child('votedBy/'+voterInitials);
+    const res = await claimRef.transaction(curr => curr ? curr : true);
+    if(!res.committed){ throw new Error('already_voted'); }
+    // 2) Increment the pick's total atomically
+    await rootRef.child('votes/'+pickInitials).transaction(curr => (curr||0)+1);
+  }
+
+  return { init, setSession, setPhase, saveTeam, markPresent, resetSession, generatePin, setPinEnabled, voteTransaction, get enabled(){ return enabled; } };
+})();
+
+/* =========================
+   Helpers & UI
+========================= */
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 
@@ -409,25 +560,28 @@ function showView(id){
   if(id==='vote'){ renderVote(); }
   if(id==='admin'){ renderAdmin(); }
 }
+
 function resultsData(){ return teamMembers.map(m=>({ name:m.name, initials:m.initials, votes:Number(votes[m.initials]||0) })).sort((a,b)=>b.votes-a.votes||a.name.localeCompare(b.name)); }
 function tallies(){
   const present = teamMembers.filter(m=>m.status==='present').length;
-  const eligible = teamMembers.filter(m=>m.status==='present' && m.initials!=='KG').length; // KG excluded (he can't vote)
+  const eligible = teamMembers.filter(m=>m.status==='present' && m.initials!=='KG').length;
   return { total:teamMembers.length, present, eligible, absent:teamMembers.length-present, voted:new Set(votedInitials).size };
 }
+
 function updateNav(){
   const u = getUser();
   $('#whoAmIText').innerHTML = !u ? `<a id="changeId">Set identity</a>` : (u==='OBSERVER' ? `You are: Observer <span class="muted">(<a id="changeId">change</a>)</span>` : `You are: ${u} <span class="muted">(<a id="changeId">change</a>)</span>`);
   $('#adminNav').classList.toggle('hide', getUser()!=='ZS');
   const link = $('#changeId'); if(link) link.addEventListener('click', e=>{ e.preventDefault(); openIdentityModal(); });
 }
+
 function setGlow(e){
   const r = e.currentTarget.getBoundingClientRect();
   e.currentTarget.style.setProperty('--gx', ((e.clientX - r.left)/r.width*100)+'%');
   e.currentTarget.style.setProperty('--gy', ((e.clientY - r.top)/r.height*100)+'%');
 }
 
-/* HEADER AUTOHIDE (TV) */
+/* Header autohide for TV */
 let hideTimer=null;
 function pingActivity(){
   clearTimeout(hideTimer);
@@ -438,11 +592,11 @@ function pingActivity(){
 ['mousemove','keydown','click','touchstart'].forEach(ev=> document.addEventListener(ev, pingActivity));
 
 /* THEME */
-function applyTheme(t){ document.documentElement.setAttribute('data-theme', t); saveTheme(t); }
+function applyTheme(t){ document.documentElement.setAttribute('data-theme', t); localStorage.setItem(LS.theme, t); }
 
 /* TEAM VIEW */
 function renderPhase(){
-  const p = getPhase();
+  const p = getPhaseLocal();
   const pill = $('#phasePill'), text = $('#phaseText');
   text.classList.remove('typing');
   if(p==='not_started'){ pill.className='pill idle'; pill.textContent='Waiting'; text.textContent='Waiting to begin…'; }
@@ -454,9 +608,7 @@ function renderPhase(){
   $('#resultsTitle').textContent = revealed ? 'Results' : 'Results (hidden)';
 }
 function renderTeam(){
-  const {total, present, absent, voted} = (function(){
-    const t = tallies(); return {total:t.total, present:t.present, absent:t.absent, voted:t.voted};
-  })();
+  const {total, present, absent, voted} = (function(){ const t=tallies(); return {total:t.total, present:t.present, absent:t.absent, voted:t.voted}; })();
   $('#t-total').textContent = total; $('#t-present').textContent = present; $('#t-absent').textContent = absent; $('#t-voted').textContent = voted;
 
   const tb = $('#teamTable tbody');
@@ -471,29 +623,38 @@ function renderTeam(){
     <div class="bar"><span style="width:${Math.round((d.votes/max)*100)}%"></span></div>
   </div>`).join('');
 }
+function updatePinUi(){
+  const show = getUser()==='KG';
+  $('#pinPanel').classList.toggle('hide', !show);
+  if(!show) return;
+  $('#pinEnable').checked = !!pinEnabled;
+  $('#pinValue').textContent = pinEnabled ? `PIN: ${sessionPin||'—'}` : 'PIN disabled';
+}
 function renderMd(){
   const isKG = getUser()==='KG';
   $('#mdPanel').classList.toggle('hide', !isKG);
   if(!isKG) return;
   const {present, eligible, voted} = tallies();
   $('#mdPresent').textContent = present; $('#mdVotes').textContent = voted;
-  const ph = getPhase();
+  const ph = getPhaseLocal();
   $('#btnStart').classList.toggle('hide', ph!=='not_started');
   $('#btnReveal').classList.toggle('hide', ph!=='open');
   const shouldSuggest = ph==='open' && voted >= Math.max(0, eligible - 1);
   $('#btnCloseReveal').classList.toggle('hide', !shouldSuggest);
+  updatePinUi();
 }
-function mdStartVoting(){ setPhase('open'); }
-function mdReveal(){ setPhase('revealed'); $('#qrBox')?.classList.add('fade'); revealOverlay(); }
+function mdStartVoting(){ SYNC.setPhase('open'); }
+function mdReveal(){ SYNC.setPhase('revealed'); $('#qrBox')?.classList.add('fade'); revealOverlay(); }
 function mdCloseRevealNow(){ mdReveal(); }
 
-/* QR */
+/* QR (includes session code) */
 function ensureQr(){
   const holder = $('#qr'); if(!holder) return;
   holder.innerHTML = '';
-  const url = (location.href.split('#')[0] || location.href) + '#view-vote';
-  try{ if(window.QRCode){ new QRCode(holder, {text:url, width:128, height:128, correctLevel: QRCode.CorrectLevel.M}); } else { holder.innerHTML = '<a href="#view-vote" class="muted" style="font-size:12px">Open Vote</a>'; } }
-  catch{ holder.innerHTML = '<a href="#view-vote" class="muted" style="font-size:12px">Open Vote</a>'; }
+  const base = location.href.split('#')[0].split('?')[0];
+  const url = `${base}?s=${encodeURIComponent(sessionId)}#view-vote`;
+  try{ if(window.QRCode){ new QRCode(holder, {text:url, width:128, height:128, correctLevel: QRCode.CorrectLevel.M}); } else { holder.innerHTML = `<a href="${url}" class="muted" style="font-size:12px">Open Vote</a>`; } }
+  catch{ holder.innerHTML = `<a href="${url}" class="muted" style="font-size:12px">Open Vote</a>`; }
 }
 
 /* CONFETTI (adaptive) */
@@ -547,65 +708,42 @@ function spawnConfetti(opts={}){
   setTimeout(()=> el.remove(), dur*1000+500);
 }
 
-/* VOTE — clear blockers with helpful messages */
+/* Vote UI with explicit blockers + PIN gate */
 function renderVote(){
   const u = getUser();
-
-  // identity status display
   $('#idStatus').textContent = u ? (u==='OBSERVER' ? 'Confirmed as Observer' : `Confirmed as ${u}`) : 'Not set';
 
   const guard = $('#voteGuard');
   const form  = $('#voteForm');
   const msg   = $('#voteMsg');
 
-  const showBlock = (text) => {
-    guard.textContent = text;
-    guard.classList.remove('hide');
-    form.classList.add('hide');
-    msg.textContent = '';
-  };
-  const showForm = () => {
-    guard.classList.add('hide');
-    form.classList.remove('hide');
-  };
+  const showBlock = (text) => { guard.textContent = text; guard.classList.remove('hide'); form.classList.add('hide'); msg.textContent = ''; };
+  const showForm  = () => { guard.classList.add('hide'); form.classList.remove('hide'); };
 
-  // 1) Must have identity
   if(!u){ showBlock('Confirm your identity to proceed.'); return; }
-
-  // 2) Non-voting roles
   if(u==='OBSERVER'){ showBlock('Observer mode: voting unavailable.'); return; }
   if(u==='KG'){ showBlock('Hi KG. Use Team View to start voting and reveal the winner.'); return; }
 
-  // 3) Phase checks
-  const ph = getPhase();
+  const ph = getPhaseLocal();
   if(ph==='not_started'){ showBlock('Voting has not started yet. Ask KG to press “Start Voting” on Team View.'); return; }
   if(ph==='revealed'){ showBlock('Voting is closed.'); return; }
-
-  // 4) Already voted?
   if(votedInitials.includes(u)){ showBlock('You have already voted this session.'); return; }
 
-  // 5) Ballot eligibility (present-only, exclude self — you CAN vote for KG if he’s present)
+  // PIN gate (only once per device per session)
+  const pinOk = localStorage.getItem(LS.pinok + sessionId) === '1';
+  if(SYNC.enabled && pinEnabled && !pinOk){
+    openPinModal(); showBlock('Enter the session PIN to unlock voting.');
+    return;
+  }
+
   const presentCount = teamMembers.filter(m=>m.status==='present').length;
   const eligible = teamMembers.filter(m=>m.status==='present' && m.initials!==u);
+  if(presentCount <= 1){ showBlock('No eligible teammates are present. At least two people must be marked Present.'); return; }
+  if(eligible.length === 0){ showBlock('No eligible teammates are available to vote for. Ask ZS to mark teammates Present in Admin.'); return; }
 
-  if(presentCount <= 1){
-    showBlock('No eligible teammates are present. At least two people must be marked Present.');
-    return;
-  }
-  if(eligible.length === 0){
-    showBlock('No eligible teammates are available to vote for. Ask ZS to mark teammates Present in Admin.');
-    return;
-  }
-
-  // 6) Ready: populate ballot, show form
-  $('#voteFor').innerHTML = '<option value="">Select a teammate…</option>' +
-    eligible.map(m=>`<option value="${m.initials}">${m.name} — ${m.initials}</option>`).join('');
-
+  $('#voteFor').innerHTML = '<option value="">Select a teammate…</option>' + eligible.map(m=>`<option value="${m.initials}">${m.name} — ${m.initials}</option>`).join('');
   msg.textContent = 'Pick a teammate (not yourself), then Confirm → Submit.';
-  $('#confirmVote').disabled = false;
-  $('#submitVote').disabled = true;
-  pendingPick = '';
-
+  $('#confirmVote').disabled = false; $('#submitVote').disabled = true; pendingPick = '';
   showForm();
 }
 
@@ -613,48 +751,34 @@ function voteConfirmStep(){
   const u = getUser();
   const sel = $('#voteFor').value.trim().toUpperCase();
   const msg = $('#voteMsg');
-
   if(!u){ msg.textContent='Confirm identity first.'; return; }
-  if(getPhase()!=='open'){ msg.textContent='Voting is not open.'; return; }
+  if(getPhaseLocal()!=='open'){ msg.textContent='Voting is not open.'; return; }
   if(!sel){ msg.textContent='Select your pick from the dropdown.'; return; }
   if(sel===u){ msg.textContent='Self-votes are not allowed. Please choose another teammate.'; return; }
-
-  // ensure selected teammate is still present (in case admin changed it live)
-  const pickRec = teamMembers.find(t=>t.initials===sel && t.status==='present');
-  if(!pickRec){ msg.textContent='Selected teammate is not currently marked Present.'; return; }
-
-  pendingPick = sel;
-  $('#submitVote').disabled = false;
-  msg.textContent = `Confirming: your vote for ${pickRec.name} (${pickRec.initials}). Click “Submit vote” to finalize.`;
+  const pickRec = teamMembers.find(t=>t.initials===sel && t.status==='present'); if(!pickRec){ msg.textContent='Selected teammate is not currently marked Present.'; return; }
+  pendingPick = sel; $('#submitVote').disabled = false; msg.textContent = `Confirming: your vote for ${pickRec.name} (${pickRec.initials}). Click “Submit vote” to finalize.`;
 }
 
-function voteSubmit(){
+async function voteSubmit(){
   const u = getUser();
   const msg = $('#voteMsg');
   if(!u){ msg.textContent='Confirm identity first.'; return; }
-  if(getPhase()!=='open'){ msg.textContent='Voting is not open.'; return; }
+  if(getPhaseLocal()!=='open'){ msg.textContent='Voting is not open.'; return; }
   if(votedInitials.includes(u)){ msg.textContent='You have already voted.'; return; }
   if(!pendingPick){ msg.textContent='Please confirm your selection first.'; return; }
-
-  votes[pendingPick] = (votes[pendingPick]||0) + 1;
-  votedInitials.push(u);
-  saveVotes(votes); saveVoted(votedInitials);
-
-  msg.textContent = 'Vote recorded. Thank you!';
-  $('#submitVote').disabled = true;
-  for(let i=0;i<Math.round(25*confettiMultiplier());i++) spawnConfetti();
-
-  renderTeam(); renderMd();
+  try{
+    await SYNC.voteTransaction(u, pendingPick);
+    msg.textContent = 'Vote recorded. Thank you!';
+    $('#submitVote').disabled = true;
+    for(let i=0;i<Math.round(25*confettiMultiplier());i++) spawnConfetti();
+  }catch(e){
+    msg.textContent = e && e.message==='already_voted' ? 'You have already voted.' : 'Could not submit vote. Please try again.';
+  }
 }
 
-function clearPick(){
-  pendingPick = '';
-  $('#voteFor').value='';
-  $('#voteMsg').textContent='';
-  $('#submitVote').disabled = true;
-}
+function clearPick(){ pendingPick=''; $('#voteFor').value=''; $('#voteMsg').textContent=''; $('#submitVote').disabled=true; }
 
-/* IDENTITY MODAL */
+/* Identity modal */
 function openIdentityModal(){
   const idSel = $('#idSelect');
   const u = getUser();
@@ -669,27 +793,34 @@ function closeIdentityModal(){ $('#idModal').classList.remove('active'); }
 function confirmIdentity(){
   const val = $('#idSelect').value.trim().toUpperCase();
   if(!val) return;
-
   if(val==='OBSERVER'){ setUser('OBSERVER'); }
-  else {
-    const rec = teamMembers.find(t=>t.initials===val);
-    if(!rec) return;
-    rec.status='present';
-    saveTeam(teamMembers);
-    setUser(val);
+  else{
+    const rec = teamMembers.find(t=>t.initials===val); if(!rec) return;
+    rec.status='present'; SYNC.saveTeam(teamMembers); setUser(val);
   }
-
-  updateNav(); renderTeam(); renderMd(); renderVote(); ensureQr();
-  closeIdentityModal();
+  updateNav(); renderTeam(); renderMd(); renderVote(); ensureQr(); closeIdentityModal();
 }
 
-/* ADMIN (ZS only) */
+/* PIN modal (voters) */
+function openPinModal(){ $('#pinModal').classList.add('active'); $('#pinMsg').textContent=''; $('#pinInput').value=''; }
+function closePinModal(){ $('#pinModal').classList.remove('active'); }
+function checkPin(){
+  const entered = ($('#pinInput').value||'').trim();
+  if(!entered){ $('#pinMsg').textContent='Enter the PIN shown on the Team View.'; return; }
+  if(entered === (sessionPin||'')){
+    localStorage.setItem(LS.pinok + sessionId, '1'); $('#pinMsg').textContent='Unlocked!'; closePinModal(); renderVote();
+  }else{
+    $('#pinMsg').textContent='Incorrect PIN. Try again.';
+  }
+}
+
+/* Admin (ZS only) */
 function renderAdmin(){
   if(getUser()!=='ZS'){
     $('#view-admin').innerHTML = `<div class="panel"><h2>Admin</h2><p class="muted">Access denied. This section is visible only when the confirmed user is ZS.</p></div>`;
     return;
   }
-  // rebuild admin layout & bind
+  // Rebuild layout
   $('#view-admin').innerHTML = `
     <h2>Admin <span class="caret">_</span></h2>
     <div class="sub">Visible only when you’re <strong>ZS</strong>.</div>
@@ -702,7 +833,7 @@ function renderAdmin(){
           <button class="btn accent" id="saveTeam">Save Team</button>
           <button class="btn" id="resetSession">New Day</button>
         </div>
-        <p class="muted" style="margin-top:8px">Saves locally on this device.</p>
+        <p class="muted" style="margin-top:8px">Saves to the session (realtime sync) and locally for offline.</p>
         <div class="sep"></div>
         <label for="themeSelect">Theme</label>
         <select id="themeSelect">
@@ -710,6 +841,13 @@ function renderAdmin(){
           <option value="neon">Blacfox Neon</option>
           <option value="minimal">Blacfox Minimal</option>
         </select>
+        <div class="sep"></div>
+        <label for="sessionInput">Session code (all devices must match)</label>
+        <div class="row">
+          <input id="sessionInput" placeholder="e.g. fox123" />
+          <button class="btn" id="saveSessionCode">Use code</button>
+        </div>
+        <p class="muted" style="margin-top:6px">QR updates automatically.</p>
       </div>
       <div class="panel" onmousemove="setGlow(event)">
         <h3>Attendance</h3>
@@ -727,40 +865,49 @@ function renderAdmin(){
   </label>`).join('');
   tgt.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
     cb.addEventListener('change', e=>{
-      const i=+e.target.getAttribute('data-i');
-      teamMembers[i].status = e.target.checked?'present':'absent';
-      saveTeam(teamMembers);
-      $('#adminMsg').textContent='Attendance updated.';
-      renderTeam(); renderVote(); renderMd();
+      const i=+e.target.getAttribute('data-i'); teamMembers[i].status = e.target.checked?'present':'absent';
+      SYNC.saveTeam(teamMembers); $('#adminMsg').textContent='Attendance updated.'; renderTeam(); renderVote(); renderMd();
     });
   });
 
-  $('#themeSelect').value = loadTheme();
+  $('#themeSelect').value = localStorage.getItem(LS.theme) || 'terminal';
   $('#themeSelect').addEventListener('change', e=> applyTheme(e.target.value));
-
   $('#saveTeam').addEventListener('click', saveTeamFromArea);
   $('#resetSession').addEventListener('click', newSession);
+
+  // session code controls
+  $('#sessionInput').value = sessionId || '';
+  $('#saveSessionCode').addEventListener('click', ()=>{
+    const val = ($('#sessionInput').value||'').trim();
+    if(!val){ alert('Enter a session code'); return; }
+    SYNC.setSession(val);
+    ensureQr();
+    renderVote();
+    $('#adminMsg').textContent = 'Session code set. Share the new QR.';
+  });
 }
+
 function saveTeamFromArea(){
   const arr=[]; for(const line of $('#teamArea').value.split('\n').map(x=>x.trim()).filter(Boolean)){ const m=line.match(/^(.+?)\s*-\s*([A-Za-z]{1,4})$/); if(m) arr.push({name:m[1].trim(), initials:m[2].toUpperCase(), status:'absent'}); }
   if(!arr.length){ alert('No valid lines. Use "Full Name - XX"'); return; }
-  teamMembers=arr; saveTeam(teamMembers); votes={}; votedInitials=[]; saveVotes(votes); saveVoted(votedInitials);
-  $('#adminMsg').textContent='Team saved. Session reset.'; renderTeam(); renderVote(); renderMd(); renderPhase(); ensureQr();
+  teamMembers=arr; SYNC.saveTeam(teamMembers);
+  votes={}; votedInitials=[]; saveVotesLocal(votes); saveVotedLocal(votedInitials);
+  $('#adminMsg').textContent='Team saved. Session reset.'; SYNC.resetSession(true); renderTeam(); renderVote(); renderMd(); renderPhase(); ensureQr();
 }
+
+/* "New Day" — clears votes & phase; keeps team & attendance */
 function newSession(){
   if(!confirm('Start a new day? This clears votes & who voted, keeps team & attendance.')) return;
-  votes={}; votedInitials=[]; saveVotes(votes); saveVoted(votedInitials); setPhase('not_started');
+  votes={}; votedInitials=[]; saveVotesLocal(votes); saveVotedLocal(votedInitials);
+  SYNC.resetSession(true);
   $('#adminMsg').textContent='New day started.'; renderTeam(); renderVote(); renderMd(); renderPhase(); ensureQr();
 }
 
-/* FULLSCREEN */
-function toggleFullscreen(){
-  const doc = document; const el = document.documentElement;
-  if(!doc.fullscreenElement){ el.requestFullscreen?.(); } else { doc.exitFullscreen?.(); }
-}
+/* Fullscreen */
+function toggleFullscreen(){ const doc=document; const el=document.documentElement; if(!doc.fullscreenElement){ el.requestFullscreen?.(); } else { doc.exitFullscreen?.(); } }
 $('#fsToggle').addEventListener('click', toggleFullscreen);
 
-/* PARTICLES */
+/* Particles */
 function initParticles(){
   const p=$('#particles'); if(!p) return;
   const base = 28 * (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.4 : 1);
@@ -775,32 +922,17 @@ function initParticles(){
   }
 }
 
-/* INTRO */
-function killIntro(){ const i=$('#intro'); if(i){ i.classList.add('hide'); setTimeout(()=>i.remove(), 220); } }
+/* Boot screen */
+function killBoot(){ const b=$('#boot'); if(b){ b.classList.add('hide'); setTimeout(()=>b.remove(), 400); } }
 
-/* HASH-DEEP LINK */
+/* Hash deep link */
 window.addEventListener('hashchange', ()=>{
   if(location.hash==='#view-vote') showView('vote');
   else if(location.hash==='#view-admin') showView('admin');
   else showView('team');
 });
 
-/* INIT */
-(function init(){
-  applyTheme(loadTheme());
-  saveTeam(teamMembers); saveVotes(votes); saveVoted(votedInitials);
-  updateNav(); renderPhase(); renderTeam(); renderMd(); renderVote();
-  if(location.hash==='#view-vote') showView('vote'); else if(location.hash==='#view-admin') showView('admin'); else showView('team');
-  initParticles(); ensureQr(); if(!getUser()) openIdentityModal(); setTimeout(killIntro, 200);
-
-  // PWA service worker
-  if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); }
-
-  // Start autohide loop
-  pingActivity();
-})();
-
-/* EVENTS */
+/* Events */
 $$('nav .btn[data-view]').forEach(b=> b.addEventListener('click', e=> showView(e.target.getAttribute('data-view'))));
 $('#btnStart').addEventListener('click', mdStartVoting);
 $('#btnReveal').addEventListener('click', mdReveal);
@@ -811,6 +943,42 @@ $('#confirmVote').addEventListener('click', voteConfirmStep);
 $('#submitVote').addEventListener('click', voteSubmit);
 $('#idCancel').addEventListener('click', closeIdentityModal);
 $('#idOk').addEventListener('click', confirmIdentity);
+$('#pinOk').addEventListener('click', checkPin);
+$('#pinCancel').addEventListener('click', closePinModal);
+
+/* KG-only PIN controls */
+$('#pinGenerate').addEventListener('click', ()=> SYNC.generatePin());
+$('#pinEnable').addEventListener('change', (e)=> SYNC.setPinEnabled(e.target.checked));
+
+/* Init */
+(function init(){
+  // theme
+  applyTheme(localStorage.getItem(LS.theme) || 'terminal');
+
+  // local mirrors persisted
+  saveTeamLocal(teamMembers); saveVotesLocal(votes); saveVotedLocal(votedInitials);
+
+  // Firebase sync boot
+  const qs = new URLSearchParams(location.search);
+  if(qs.get('s')){ sessionId = qs.get('s'); localStorage.setItem(LS.session, sessionId); }
+  // inject chosen sessionId to config for first init
+  if(window.BF_SYNC) window.BF_SYNC.sessionId = sessionId;
+  SYNC.init();
+
+  updateNav(); renderPhase(); renderTeam(); renderMd(); renderVote();
+  if(location.hash==='#view-vote') showView('vote'); else if(location.hash==='#view-admin') showView('admin'); else showView('team');
+
+  initParticles(); ensureQr();
+  if(!getUser()) openIdentityModal();
+
+  // 5s boot screen
+  setTimeout(killBoot, 5000);
+
+  // Register PWA SW (optional)
+  if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); }
+
+  pingActivity(); // start autohide loop
+})();
 </script>
 </body>
 </html>

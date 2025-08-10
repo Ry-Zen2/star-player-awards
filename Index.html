@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blacfox Star Player Awards</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #000;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+        }
+
+        /* Subtle animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(220, 20, 60, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(220, 20, 60, 0.1) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        .container {
+            background: rgba(15, 15, 15, 0.98);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(220, 20, 60, 0.2);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo-img {
+            width: 150px;
+            height: auto;
+            filter: brightness(0) invert(1);
+            opacity: 0.95;
+        }
+
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #DC143C;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .view-btn {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid rgba(220, 20, 60, 0.2);
+            background: rgba(0, 0, 0, 0.3);
+            color: #888;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .view-btn.active {
+            background: #DC143C;
+            color: white;
+            border-color: #DC143C;
+        }
+
+        .view-btn:hover:not(.active) {
+            border-color: #DC143C;
+            color: #DC143C;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #DC143C;
+            font-weight: 600;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"], input[type="password"], textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid rgba(220, 20, 60, 0.2);
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            font-size: 16px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus, input[type="password"]:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #DC143C;
+            background: rgba(220, 20, 60, 0.05);
+        }
+
+        select option {
+            background: #1a1a1a;
+            color: white;
+        }
+
+        .team-members {
+            margin-bottom: 20px;
+        }
+
+        .member-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(220, 20, 60, 0.2);
+            padding: 16px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .member-card:hover {
+            transform: translateX(5px);
+            border-color: #DC143C;
+            background: rgba(220, 20, 60, 0.05);
+        }
+
+        .member-card.selected {
+            background: #DC143C;
+            border-color: #DC143C;
+            transform: scale(1.02);
+        }
+
+        .member-name {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .check-icon {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            color: #fff;
+            font-size: 1.2em;
+        }
+
+        .member-card.selected .check-icon {
+            opacity: 1;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: #DC143C;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #B91C3C;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 20, 60, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(0, 0, 0, 0.3);
+            color: #DC143C;
+            border: 1px solid rgba(220, 20, 60, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(220, 20, 60, 0.1);
+            border-color: #DC143C;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .results {
+            margin-top: 20px;
+        }
+
+        .result-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 18px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .rank {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            color: #fff;
+            background: rgba(220, 20, 60, 0.2);
+            border: 1px solid rgba(220, 20, 60, 0.3);
+        }
+
+        .rank.first {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border: none;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+            color: #000;
+        }
+
+        .rank.second {
+            background: linear-gradient(135deg, #C0C0C0, #808080);
+            border: none;
+            color: #000;
+        }
+
+        .rank.third {
+            background: linear-gradient(135deg, #CD7F32, #8B4513);
+            border: none;
+            color: #fff;
+        }
+
+        .result-info {
+            flex: 1;
+        }
+
+        .result-name {
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+
+        .vote-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .vote-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #DC143C, #FF6B6B);
+            border-radius: 10px;
+            transition: width 1s ease-out;
+        }
+
+        .vote-count {
+            font-size: 0.85em;
+            color: #888;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .message.success {
+            background: rgba(220, 20, 60, 0.1);
+            color: #DC143C;
+            border: 1px solid rgba(220, 20, 60, 0.3);
+        }
+
+        .message.info {
+            background: rgba(255, 255, 255, 0.05);
+            color: #888;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .message.error {
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff6b6b;
+            border: 1px solid rgba(255, 0, 0, 0.3);
+        }
+
+        .celebration {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 80px;
+            animation: celebrate 1s ease-out forwards;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        @keyframes celebrate {
+            0% {
+                transform: translate(-50%, -50%) scale(0) rotate(0deg);
+                opacity: 1;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2) rotate(180deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(0) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .winner-badge {
+            display: inline-block;
+            margin-left: 8px;
+            font-size: 1.2em;
+        }
+
+        /* Password modal styles */
+        .password-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .password-modal.active {
+            display: flex;
+        }
+
+        .password-box {
+            background: rgba(15, 15, 15, 0.98);
+            border: 1px solid rgba(220, 20, 60, 0.3);
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .password-title {
+            color: #DC143C;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.2em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .password-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .password-actions button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .password-submit {
+            background: #DC143C;
+            color: white;
+        }
+
+        .password-submit:hover {
+            background: #B91C3C;
+        }
+
+        .password-cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: #888;
+        }
+
+        .password-cancel:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .attendance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .initials-badge {
+            padding: 8px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .initials-badge.checked-in {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid rgba(76, 175, 80, 0.5);
+            color: #4CAF50;
+        }
+
+        .initials-badge.absent {
+            background: rgba(255, 152, 0, 0.2);
+            border: 1px solid rgba(255, 152, 0, 0.5);
+            color: #FF9800;
+        }
+
+        .initials-badge.voted {
+            background: rgba(220, 20, 60, 0.2);
+            border: 1px solid rgba(220, 20, 60, 0.5);
+            color: #DC143C;
+        }
+
+        #landingPage {
+            text-align: center;
+        }
+
+        .initials-select-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 12px;
+            margin: 25px 0;
+        }
+
+        .initials-option {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(220, 20, 60, 0.2);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: #fff;
+            font-size: 1.1em;
+        }
+
+        .initials-option:hover {
+            border-color: #DC143C;
+            background: rgba(220, 20, 60, 0.1);
+            transform: scale(1.05);
+        }
+
+        .initials-option.selected {
+            background: #DC143C;
+            border-color: #DC143C;
+            transform: scale(1.08);
+        }
+
+        .initials-option.already-checked {
+            opacity: 0.4;
+            cursor: not-allowed;
+            text-decoration: line-through;
+        }
+
+        .initials-option.already-checked:hover {
+            transform: scale(1);
+        }
+
+        .drumroll {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .drumroll-text {
+            font-size: 3em;
+            color: #DC143C;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 30px;
+            animation: pulse 0.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .drumroll-dots {
+            font-size: 4em;
+            color: #FFD700;
+            letter-spacing: 10px;
+        }
+        
+        .winner-reveal {
+            animation: zoomIn 1s ease-out;
+            text-align: center;
+        }
+        
+        @keyframes zoomIn {
+            from {
+                opacity: 0;
+                transform: scale(0);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .winner-name {
+            font-size: 4em;
+            color: #FFD700;
+            text-transform: uppercase;
+            margin: 20px 0;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+        }
+        
+        .winner-title {
+            font-size: 1.5em;
+            color: #DC143C;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        @keyframes confettiFall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Landing Page -->
+    <div id="landingPage" class="container" style="display: none;">
+        <div class="logo-container">
+            <svg class="logo-img" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="30" cy="30" r="25" fill="white"/>
+                <path d="M 20 15 Q 15 5, 25 8 L 22 15" fill="black"/>
+                <path d="M 38 15 L 35 8 Q 45 5, 40 15" fill="black"/>
+                <text x="65" y="40" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white">blacfox</text>
+            </svg>
+        </div>
+        
+        <h1>Star Player Awards</h1>
+        <p class="subtitle">Friday Validation Sessions</p>
+        
+        <h2>Check In For Voting</h2>
+        <p style="color: #888; margin-bottom: 20px;">Select your initials to check in. Your vote will remain anonymous.</p>
+        
+        <div id="initialsGrid" class="initials-select-grid">
+            <!-- Initials will be populated here -->
+        </div>
+        
+        <button id="proceedBtn" class="btn btn-primary" onclick="proceedToVoting()" disabled>Select Your Initials First</button>
+    </div>
+
+    <!-- Main Voting Interface -->
+    <div id="mainInterface" class="container" style="display: none;">
+        <div class="logo-container">
+            <svg class="logo-img" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="30" cy="30" r="25" fill="white"/>
+                <path d="M 20 15 Q 15 5, 25 8 L 22 15" fill="black"/>
+                <path d="M 38 15 L 35 8 Q 45 5, 40 15" fill="black"/>
+                <text x="65" y="40" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white">blacfox</text>
+            </svg>
+        </div>
+        
+        <h1>Star Player Awards</h1>
+        <p class="subtitle">Friday Validation Sessions</p>
+
+        <div class="view-toggle">
+            <button class="view-btn active" onclick="showView('vote')">Cast Vote</button>
+            <button class="view-btn" onclick="showView('results')">View Results</button>
+            <button id="adminBtn" class="view-btn" onclick="showView('admin')" style="display: none;">Admin</button>
+            <button id="mdBtn" class="view-btn" onclick="showView('md')" style="display: none;">MD View</button>
+        </div>
+
+        <!-- Voting View -->
+        <div id="voteView" class="view">
+            <div id="votingStatus" style="background: rgba(220, 20, 60, 0.1); border: 1px solid rgba(220, 20, 60, 0.3); border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+                <h4 style="color: #DC143C; margin-bottom: 10px;">Session Attendance</h4>
+                <div id="attendanceTally" style="color: #888; font-size: 0.9em;"></div>
+                <div id="attendanceGrid" class="attendance-grid" style="margin-top: 15px;"></div>
+            </div>
+
+            <div id="votingClosedMessage" style="display: none; background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 10px; padding: 20px; text-align: center; margin-bottom: 20px;">
+                <h3 style="color: #FFD700; margin-bottom: 10px;">🏆 Voting Complete!</h3>
+                <p style="color: #888;">All present team members have voted. Check the results to see the winner!</p>
+            </div>
+
+            <div id="votingForm">
+                <div id="alreadyVotedMessage" style="display: none; background: rgba(76, 175, 80, 0.1); border: 1px solid rgba(76, 175, 80, 0.3); border-radius: 10px; padding: 20px; text-align: center; margin-bottom: 20px;">
+                    <h3 style="color: #4CAF50; margin-bottom: 10px;">✅ You've Already Voted!</h3>
+                    <p style="color: #888;">Thank you for participating. Check the results tab to see the current standings.</p>
+                </div>
+
+                <div id="votingFormContent">
+                    <div class="team-members">
+                        <label>Select Star Player (Your vote is anonymous):</label>
+                        <div id="membersList"></div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="submitVote()">Submit Anonymous Vote ⭐</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results View -->
+        <div id="resultsView" class="view" style="display: none;">
+            <div class="results" id="resultsContainer">
+                <!-- Results will be populated here -->
+            </div>
+            <button class="btn btn-secondary" onclick="refreshResults()">Refresh Results</button>
+        </div>
+
+        <!-- Admin View -->
+        <div id="adminView" class="view" style="display: none;">
+            <div class="input-group">
+                <label for="teamMembersInput">Team Members & Initials (Format: "Full Name - XX")</label>
+                <textarea id="teamMembersInput" style="width: 100%; padding: 12px; border: 1px solid rgba(220, 20, 60, 0.2); background: rgba(0, 0, 0, 0.3); color: white; border-radius: 10px; font-size: 16px; min-height: 150px; font-family: inherit;" placeholder="John Doe - JD&#10;Jane Smith - JS&#10;Mike Johnson - MJ&#10;Sarah Williams - SW"></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="saveTeamMembers()">Save Team Members</button>
+            <button class="btn btn-secondary" onclick="startNewSession()">Start New Session</button>
+            <button class="btn btn-secondary" onclick="markAbsent()">Mark Remaining as Absent</button>
+            <button class="btn btn-secondary" onclick="exportResults()">Export Results</button>
+        </div>
+
+        <!-- MD View -->
+        <div id="mdView" class="view" style="display: none;">
+            <div style="background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                <h3 style="color: #FFD700; text-align: center;">Managing Director Dashboard</h3>
+            </div>
+            
+            <div id="mdAttendance" style="background: rgba(220, 20, 60, 0.1); border: 1px solid rgba(220, 20, 60, 0.3); border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+                <h4 style="color: #DC143C; margin-bottom: 10px;">Session Status</h4>
+                <div id="mdTally" style="color: #888; font-size: 0.9em;"></div>
+            </div>
+            
+            <div class="results" id="mdResultsContainer">
+                <!-- Results will be populated here -->
+            </div>
+            
+            <button class="btn btn-secondary" onclick="refreshMDView()">Refresh View</button>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="passwordModal" class="password-modal">
+        <div class="password-box">
+            <h3 class="password-title">Admin Access Required</h3>
+            <div class="input-group">
+                <label for="adminPassword">Enter Password:</label>
+                <input type="password" id="adminPassword" placeholder="Enter admin password">
+            </div>
+            <div class="password-actions">
+                <button class="password-submit" onclick="checkPassword()">Submit</button>
+                <button class="password-cancel" onclick="cancelPassword()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // [COPY THE COMPLETE JAVASCRIPT CODE FROM THE ARTIFACT HERE]
+        // Configuration
+        const ADMIN_PASSWORD = 'blacfox2024';
+        const ADMIN_INITIALS = 'ZS';
+        const MD_INITIALS = 'KG';
+        
+        // Initialize data
+        let votes = {};
+        let teamMembers = [];
+        let teamInitials = {};
+        let checkedInInitials = [];
+        let votedInitials = [];
+        let currentUserInitials = null;
+        let votingClosed = false;
+        let selectedMember = null;
+        let pendingAdminAction = null;
+
+        // [INCLUDE ALL THE JAVASCRIPT FUNCTIONS FROM THE ARTIFACT]
+        // The complete JavaScript code continues here...
+        // (Copy all functions from loadData() through to the end)
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', init);
+        
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            init();
+        }
+    </script>
+</body>
+</html>

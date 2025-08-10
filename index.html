@@ -28,7 +28,7 @@
     --gx:50%; --gy:50%;
   }
   /* Theme presets */
-  :root[data-theme="terminal"]{ /* default (current palette) */ }
+  :root[data-theme="terminal"]{ /* default */ }
   :root[data-theme="neon"]{
     --bg:#030309; --panel:#0b0c12; --panel2:#07070c;
     --ink:#f7f7ff; --muted:#bdbfe6; --accent:#ff3df0; --accent-rgb:255,61,240;
@@ -49,6 +49,7 @@
     font:15px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     letter-spacing:.2px;
   }
+  /* scanlines + vignette */
   body::before{
     content:""; position:fixed; inset:0; pointer-events:none;
     background:repeating-linear-gradient(180deg, rgba(255,255,255,.02) 0 2px, transparent 2px 4px);
@@ -59,9 +60,13 @@
     background:radial-gradient(75% 75% at 50% 120%, rgba(0,0,0,.7), transparent 60%);
   }
 
-  /* Floating particles */
+  /* Floating logo particles */
   .particles{position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden}
-  .particle{ position:absolute; width:4px; height:4px; border-radius:50%; background:rgba(255,255,255,.8); opacity:.6; filter:blur(.2px); animation:floatUp linear infinite; }
+  .particle{
+    position:absolute; width:4px; height:4px; border-radius:50%;
+    background:rgba(255,255,255,.8); opacity:.6; filter:blur(.2px);
+    animation:floatUp linear infinite;
+  }
   .particle.o{ background:rgba(var(--accent-rgb),.9); }
   @keyframes floatUp{
     from{ transform:translate3d(var(--x,0), 110vh,0) scale(var(--s,1)); opacity:.0 }
@@ -407,7 +412,7 @@ function showView(id){
 function resultsData(){ return teamMembers.map(m=>({ name:m.name, initials:m.initials, votes:Number(votes[m.initials]||0) })).sort((a,b)=>b.votes-a.votes||a.name.localeCompare(b.name)); }
 function tallies(){
   const present = teamMembers.filter(m=>m.status==='present').length;
-  const eligible = teamMembers.filter(m=>m.status==='present' && m.initials!=='KG').length;
+  const eligible = teamMembers.filter(m=>m.status==='present' && m.initials!=='KG').length; // KG excluded (he can't vote)
   return { total:teamMembers.length, present, eligible, absent:teamMembers.length-present, voted:new Set(votedInitials).size };
 }
 function updateNav(){
@@ -449,12 +454,22 @@ function renderPhase(){
   $('#resultsTitle').textContent = revealed ? 'Results' : 'Results (hidden)';
 }
 function renderTeam(){
-  const {total, present, absent, voted} = tallies();
+  const {total, present, absent, voted} = (function(){
+    const t = tallies(); return {total:t.total, present:t.present, absent:t.absent, voted:t.voted};
+  })();
   $('#t-total').textContent = total; $('#t-present').textContent = present; $('#t-absent').textContent = absent; $('#t-voted').textContent = voted;
+
   const tb = $('#teamTable tbody');
   tb.innerHTML = teamMembers.map(m=>`<tr><td>${m.name}</td><td><strong>${m.initials}</strong></td><td>${m.status==='present'?'<span class="chip ok">Present</span>':'<span class="chip abs">Absent</span>'}</td></tr>`).join('');
+
   const bars = $('#teamBars'), data = resultsData(), max = Math.max(1, ...data.map(d=>d.votes));
-  bars.innerHTML = data.map(d=>`<div style="margin:10px 0"><div class="row" style="align-items:center"><div style="font-weight:800;">${d.name} <span class="muted">(${d.initials})</span></div><div style="margin-left:auto" class="chip">${d.votes} vote${d.votes===1?'':'s'}</div></div><div class="bar"><span style="width:${Math.round((d.votes/max)*100)}%"></span></div></div>`).join('');
+  bars.innerHTML = data.map(d=>`<div style="margin:10px 0">
+    <div class="row" style="align-items:center">
+      <div style="font-weight:800;">${d.name} <span class="muted">(${d.initials})</span></div>
+      <div style="margin-left:auto" class="chip">${d.votes} vote${d.votes===1?'':'s'}</div>
+    </div>
+    <div class="bar"><span style="width:${Math.round((d.votes/max)*100)}%"></span></div>
+  </div>`).join('');
 }
 function renderMd(){
   const isKG = getUser()==='KG';
@@ -532,84 +547,197 @@ function spawnConfetti(opts={}){
   setTimeout(()=> el.remove(), dur*1000+500);
 }
 
-/* VOTE */
+/* VOTE — clear blockers with helpful messages */
 function renderVote(){
   const u = getUser();
+
+  // identity status display
   $('#idStatus').textContent = u ? (u==='OBSERVER' ? 'Confirmed as Observer' : `Confirmed as ${u}`) : 'Not set';
-  $('#voteGuard').classList.toggle('hide', !!u);
-  $('#voteForm').classList.toggle('hide', !u);
 
-  if(u==='OBSERVER'){ $('#voteGuard').textContent='Observer mode: voting unavailable.'; $('#voteForm').classList.add('hide'); return; }
-  if(u==='KG'){ $('#voteGuard').textContent='Hi KG. Use Team View to start and reveal.'; $('#voteForm').classList.add('hide'); return; }
-  if(!u){ $('#voteGuard').textContent='Confirm your identity to proceed.'; return; }
+  const guard = $('#voteGuard');
+  const form  = $('#voteForm');
+  const msg   = $('#voteMsg');
 
+  const showBlock = (text) => {
+    guard.textContent = text;
+    guard.classList.remove('hide');
+    form.classList.add('hide');
+    msg.textContent = '';
+  };
+  const showForm = () => {
+    guard.classList.add('hide');
+    form.classList.remove('hide');
+  };
+
+  // 1) Must have identity
+  if(!u){ showBlock('Confirm your identity to proceed.'); return; }
+
+  // 2) Non-voting roles
+  if(u==='OBSERVER'){ showBlock('Observer mode: voting unavailable.'); return; }
+  if(u==='KG'){ showBlock('Hi KG. Use Team View to start voting and reveal the winner.'); return; }
+
+  // 3) Phase checks
   const ph = getPhase();
-  if(ph==='not_started'){ $('#voteGuard').textContent='Voting has not started yet.'; $('#voteForm').classList.add('hide'); return; }
-  if(ph==='revealed'){ $('#voteGuard').textContent='Voting is closed.'; $('#voteForm').classList.add('hide'); return; }
-  $('#voteGuard').classList.add('hide'); $('#voteForm').classList.remove('hide');
+  if(ph==='not_started'){ showBlock('Voting has not started yet. Ask KG to press “Start Voting” on Team View.'); return; }
+  if(ph==='revealed'){ showBlock('Voting is closed.'); return; }
 
-  // ballot: ONLY present teammates, excluding self (includes KG if present)
-  const ballot = teamMembers.filter(m=>m.status==='present' && m.initials!==u);
-  $('#voteFor').innerHTML = '<option value="">Select a teammate…</option>' + ballot.map(m=>`<option value="${m.initials}">${m.name} — ${m.initials}</option>`).join('');
+  // 4) Already voted?
+  if(votedInitials.includes(u)){ showBlock('You have already voted this session.'); return; }
 
-  const msg = $('#voteMsg');
-  if(votedInitials.includes(u)){ msg.textContent='You have already voted.'; $('#confirmVote').disabled=true; $('#submitVote').disabled=true; }
-  else { msg.textContent=''; $('#confirmVote').disabled=false; $('#submitVote').disabled=true; pendingPick=''; }
+  // 5) Ballot eligibility (present-only, exclude self — you CAN vote for KG if he’s present)
+  const presentCount = teamMembers.filter(m=>m.status==='present').length;
+  const eligible = teamMembers.filter(m=>m.status==='present' && m.initials!==u);
+
+  if(presentCount <= 1){
+    showBlock('No eligible teammates are present. At least two people must be marked Present.');
+    return;
+  }
+  if(eligible.length === 0){
+    showBlock('No eligible teammates are available to vote for. Ask ZS to mark teammates Present in Admin.');
+    return;
+  }
+
+  // 6) Ready: populate ballot, show form
+  $('#voteFor').innerHTML = '<option value="">Select a teammate…</option>' +
+    eligible.map(m=>`<option value="${m.initials}">${m.name} — ${m.initials}</option>`).join('');
+
+  msg.textContent = 'Pick a teammate (not yourself), then Confirm → Submit.';
+  $('#confirmVote').disabled = false;
+  $('#submitVote').disabled = true;
+  pendingPick = '';
+
+  showForm();
 }
+
 function voteConfirmStep(){
-  const u = getUser(), sel = $('#voteFor').value.trim().toUpperCase(), msg=$('#voteMsg');
+  const u = getUser();
+  const sel = $('#voteFor').value.trim().toUpperCase();
+  const msg = $('#voteMsg');
+
   if(!u){ msg.textContent='Confirm identity first.'; return; }
-  if(!sel){ msg.textContent='Select your pick.'; return; }
-  if(sel===u){ msg.textContent='Self-votes are not allowed.'; return; }
-  const pickRec = teamMembers.find(t=>t.initials===sel && t.status==='present'); if(!pickRec){ msg.textContent='Selected teammate is not marked present.'; return; }
-  pendingPick = sel; $('#submitVote').disabled=false; msg.textContent=`Confirming: your vote for ${pickRec.name} (${pickRec.initials}). Click “Submit vote” to finalize.`;
+  if(getPhase()!=='open'){ msg.textContent='Voting is not open.'; return; }
+  if(!sel){ msg.textContent='Select your pick from the dropdown.'; return; }
+  if(sel===u){ msg.textContent='Self-votes are not allowed. Please choose another teammate.'; return; }
+
+  // ensure selected teammate is still present (in case admin changed it live)
+  const pickRec = teamMembers.find(t=>t.initials===sel && t.status==='present');
+  if(!pickRec){ msg.textContent='Selected teammate is not currently marked Present.'; return; }
+
+  pendingPick = sel;
+  $('#submitVote').disabled = false;
+  msg.textContent = `Confirming: your vote for ${pickRec.name} (${pickRec.initials}). Click “Submit vote” to finalize.`;
 }
+
 function voteSubmit(){
-  const u = getUser(), msg=$('#voteMsg');
+  const u = getUser();
+  const msg = $('#voteMsg');
   if(!u){ msg.textContent='Confirm identity first.'; return; }
   if(getPhase()!=='open'){ msg.textContent='Voting is not open.'; return; }
   if(votedInitials.includes(u)){ msg.textContent='You have already voted.'; return; }
   if(!pendingPick){ msg.textContent='Please confirm your selection first.'; return; }
-  votes[pendingPick] = (votes[pendingPick]||0) + 1; votedInitials.push(u); saveVotes(votes); saveVoted(votedInitials);
-  msg.textContent='Vote recorded. Thank you!'; $('#submitVote').disabled=true; for(let i=0;i<Math.round(25*confettiMultiplier());i++) spawnConfetti();
+
+  votes[pendingPick] = (votes[pendingPick]||0) + 1;
+  votedInitials.push(u);
+  saveVotes(votes); saveVoted(votedInitials);
+
+  msg.textContent = 'Vote recorded. Thank you!';
+  $('#submitVote').disabled = true;
+  for(let i=0;i<Math.round(25*confettiMultiplier());i++) spawnConfetti();
+
   renderTeam(); renderMd();
 }
-function clearPick(){ pendingPick=''; $('#voteFor').value=''; $('#voteMsg').textContent=''; $('#submitVote').disabled=true; }
+
+function clearPick(){
+  pendingPick = '';
+  $('#voteFor').value='';
+  $('#voteMsg').textContent='';
+  $('#submitVote').disabled = true;
+}
 
 /* IDENTITY MODAL */
 function openIdentityModal(){
-  const idSel = $('#idSelect'), u=getUser();
-  idSel.innerHTML = [`<option value="">Select your name…</option>`,`<option value="OBSERVER"${u==='OBSERVER'?' selected':''}>Observer — TV</option>`, ...teamMembers.map(m=>`<option value="${m.initials}" ${u===m.initials?'selected':''}>${m.name} — ${m.initials}</option>`)].join('');
+  const idSel = $('#idSelect');
+  const u = getUser();
+  idSel.innerHTML = [
+    `<option value="">Select your name…</option>`,
+    `<option value="OBSERVER"${u==='OBSERVER'?' selected':''}>Observer — TV</option>`,
+    ...teamMembers.map(m=>`<option value="${m.initials}" ${u===m.initials?'selected':''}>${m.name} — ${m.initials}</option>`)
+  ].join('');
   $('#idModal').classList.add('active');
 }
 function closeIdentityModal(){ $('#idModal').classList.remove('active'); }
 function confirmIdentity(){
-  const val = $('#idSelect').value.trim().toUpperCase(); if(!val) return;
+  const val = $('#idSelect').value.trim().toUpperCase();
+  if(!val) return;
+
   if(val==='OBSERVER'){ setUser('OBSERVER'); }
-  else { const rec = teamMembers.find(t=>t.initials===val); if(!rec) return; rec.status='present'; saveTeam(teamMembers); setUser(val); }
-  updateNav(); renderTeam(); renderMd(); renderVote(); ensureQr(); closeIdentityModal();
+  else {
+    const rec = teamMembers.find(t=>t.initials===val);
+    if(!rec) return;
+    rec.status='present';
+    saveTeam(teamMembers);
+    setUser(val);
+  }
+
+  updateNav(); renderTeam(); renderMd(); renderVote(); ensureQr();
+  closeIdentityModal();
 }
 
 /* ADMIN (ZS only) */
 function renderAdmin(){
-  if(getUser()!=='ZS'){ $('#view-admin').innerHTML = `<div class="panel"><h2>Admin</h2><p class="muted">Access denied. This section is visible only when the confirmed user is ZS.</p></div>`; return; }
-  // rebuild default admin layout (in case of access refresh)
-  $('#view-admin').innerHTML = document.querySelector('#view-admin').innerHTML; // no-op placeholder to keep structure
-  // set textarea
+  if(getUser()!=='ZS'){
+    $('#view-admin').innerHTML = `<div class="panel"><h2>Admin</h2><p class="muted">Access denied. This section is visible only when the confirmed user is ZS.</p></div>`;
+    return;
+  }
+  // rebuild admin layout & bind
+  $('#view-admin').innerHTML = `
+    <h2>Admin <span class="caret">_</span></h2>
+    <div class="sub">Visible only when you’re <strong>ZS</strong>.</div>
+    <div class="grid cols-2">
+      <div class="panel" onmousemove="setGlow(event)">
+        <h3>Team Members</h3>
+        <label for="teamArea">Format: <code>Full Name - XX</code> per line</label>
+        <textarea id="teamArea" spellcheck="false"></textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="btn accent" id="saveTeam">Save Team</button>
+          <button class="btn" id="resetSession">New Day</button>
+        </div>
+        <p class="muted" style="margin-top:8px">Saves locally on this device.</p>
+        <div class="sep"></div>
+        <label for="themeSelect">Theme</label>
+        <select id="themeSelect">
+          <option value="terminal">Blacfox Terminal (default)</option>
+          <option value="neon">Blacfox Neon</option>
+          <option value="minimal">Blacfox Minimal</option>
+        </select>
+      </div>
+      <div class="panel" onmousemove="setGlow(event)">
+        <h3>Attendance</h3>
+        <div id="adminAttendance"></div>
+        <div class="sep"></div>
+        <div id="adminMsg" class="muted" style="margin-top:10px"></div>
+      </div>
+    </div>`;
+
   $('#teamArea').value = teamMembers.map(m=>`${m.name} - ${m.initials}`).join('\n');
-  // attendance toggles
+
   const tgt = $('#adminAttendance');
-  tgt.innerHTML = teamMembers.map((m,i)=>`<label style="display:flex;align-items:center;gap:10px;margin:6px 0"><input type="checkbox" data-i="${i}" ${m.status==='present'?'checked':''}/> ${m.name} <span class="muted">(${m.initials})</span></label>`).join('');
+  tgt.innerHTML = teamMembers.map((m,i)=>`<label style="display:flex;align-items:center;gap:10px;margin:6px 0">
+    <input type="checkbox" data-i="${i}" ${m.status==='present'?'checked':''}/> ${m.name} <span class="muted">(${m.initials})</span>
+  </label>`).join('');
   tgt.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
     cb.addEventListener('change', e=>{
-      const i=+e.target.getAttribute('data-i'); teamMembers[i].status = e.target.checked?'present':'absent'; saveTeam(teamMembers);
-      $('#adminMsg').textContent='Attendance updated.'; renderTeam(); renderVote(); renderMd();
+      const i=+e.target.getAttribute('data-i');
+      teamMembers[i].status = e.target.checked?'present':'absent';
+      saveTeam(teamMembers);
+      $('#adminMsg').textContent='Attendance updated.';
+      renderTeam(); renderVote(); renderMd();
     });
   });
-  // theme selector
+
   $('#themeSelect').value = loadTheme();
   $('#themeSelect').addEventListener('change', e=> applyTheme(e.target.value));
-  // admin buttons
+
   $('#saveTeam').addEventListener('click', saveTeamFromArea);
   $('#resetSession').addEventListener('click', newSession);
 }

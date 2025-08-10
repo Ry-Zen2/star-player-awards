@@ -212,7 +212,7 @@
 
         <div class="panel" id="votePanel">
           <h3>Ballot</h3>
-          <div id="voteGuard" class="muted">Confirm your identity first.</div>
+          <div id="voteGuard" class="muted">Confirm your identity to proceed.</div>
           <div id="voteForm" class="hide">
             <label for="voteFor">I vote for</label>
             <select id="voteFor"></select>
@@ -264,7 +264,7 @@
       <button class="btn" id="idCancel">Not now</button>
       <button class="btn accent" id="idOk">Confirm</button>
     </div>
-    <p class="muted" style="margin-top:8px">This also marks you present.</p>
+    <p class="muted" style="margin-top:8px">Selecting your name also marks you present. <br/>You can also choose <b>Observer</b> for the TV screen.</p>
   </div>
 </div>
 
@@ -350,10 +350,15 @@ function tallies(){
 }
 function updateNav(){
   const u = getUser();
-  const display = u ? `You are: ${u} <span class="muted">(<a id="changeId">change</a>)</span>` : `<a id="changeId">Set identity</a>`;
-  $('#whoAmIText').innerHTML = display;
-  const adminBtn = $('#adminNav');
-  adminBtn.classList.toggle('hide', u!=='ZS');
+  let label = '';
+  if(!u) label = `<a id="changeId">Set identity</a>`;
+  else if(u==='OBSERVER') label = `You are: Observer <span class="muted">(<a id="changeId">change</a>)</span>`;
+  else label = `You are: ${u} <span class="muted">(<a id="changeId">change</a>)</span>`;
+  $('#whoAmIText').innerHTML = label;
+
+  // Admin nav only if ZS
+  $('#adminNav').classList.toggle('hide', u!=='ZS');
+
   // attach change handler
   const link = $('#changeId'); if(link) link.addEventListener('click', (e)=>{ e.preventDefault(); openIdentityModal(); });
 }
@@ -510,18 +515,24 @@ function spawnConfetti(){
 function renderVote(){
   const u = getUser();
   // identity status
-  $('#idStatus').textContent = u ? `Confirmed as ${u}` : 'Not set';
+  $('#idStatus').textContent = u ? (u==='OBSERVER' ? 'Confirmed as Observer' : `Confirmed as ${u}`) : 'Not set';
 
   // guard
   $('#voteGuard').classList.toggle('hide', !!u);
   $('#voteForm').classList.toggle('hide', !u);
 
-  // KG cannot vote
+  // Observer & KG cannot vote
+  if(u==='OBSERVER'){
+    $('#voteGuard').textContent = 'Observer mode: voting unavailable.';
+    $('#voteForm').classList.add('hide');
+    return;
+  }
   if(u==='KG'){
     $('#voteGuard').textContent = 'Hi KG. Use Team View to start voting and reveal the winner.';
     $('#voteForm').classList.add('hide');
     return;
-  }else if(!u){
+  }
+  if(!u){
     $('#voteGuard').textContent = 'Confirm your identity to proceed.';
     return;
   }else{
@@ -532,8 +543,8 @@ function renderVote(){
     $('#voteForm').classList.remove('hide');
   }
 
-  // ballot: all other teammates (regardless of attendance, or limit to present?)
-  const ballot = teamMembers.filter(m=>m.initials!==u);
+  // ballot: ONLY present teammates, excluding self
+  const ballot = teamMembers.filter(m=>m.status==='present' && m.initials!==u);
   $('#voteFor').innerHTML = '<option value="">Select a teammate…</option>' +
     ballot.map(m=>`<option value="${m.initials}">${m.name} — ${m.initials}</option>`).join('');
 
@@ -559,10 +570,13 @@ function voteConfirmStep(){
   if(!sel){ msg.textContent='Select your pick.'; return; }
   if(sel===u){ msg.textContent='Self-votes are not allowed.'; return; }
 
+  // ensure pick is PRESENT
+  const pickRec = teamMembers.find(t=>t.initials===sel && t.status==='present');
+  if(!pickRec){ msg.textContent='Selected teammate is not currently marked present.'; return; }
+
   pendingPick = sel;
-  const target = teamMembers.find(t=>t.initials===sel);
   $('#submitVote').disabled = false;
-  msg.textContent = `Confirming: your vote for ${target.name} (${target.initials}). Click “Submit vote” to finalize.`;
+  msg.textContent = `Confirming: your vote for ${pickRec.name} (${pickRec.initials}). Click “Submit vote” to finalize.`;
 }
 
 function voteSubmit(){
@@ -573,7 +587,7 @@ function voteSubmit(){
   if(votedInitials.includes(u)){ msg.textContent='You have already voted.'; return; }
   if(!pendingPick){ msg.textContent='Please confirm your selection first.'; return; }
 
-  // apply vote (anonymous: we store only totals + that you voted)
+  // apply vote (anonymous: store only totals + that you voted)
   votes[pendingPick] = (votes[pendingPick]||0) + 1;
   votedInitials.push(u);
   saveVotes(votes); saveVoted(votedInitials);
@@ -597,11 +611,15 @@ function clearPick(){
    Identity modal
 ========================= */
 function openIdentityModal(){
-  // populate list
+  // populate list (Observer + team)
   const idSel = $('#idSelect');
   const u = getUser();
-  idSel.innerHTML = '<option value="">Select your name…</option>' +
-    teamMembers.map(m=>`<option value="${m.initials}" ${u===m.initials?'selected':''}>${m.name} — ${m.initials}</option>`).join('');
+  const opts = [
+    `<option value="">Select your name…</option>`,
+    `<option value="OBSERVER"${u==='OBSERVER'?' selected':''}>Observer — TV</option>`,
+    ...teamMembers.map(m=>`<option value="${m.initials}" ${u===m.initials?'selected':''}>${m.name} — ${m.initials}</option>`)
+  ];
+  idSel.innerHTML = opts.join('');
   $('#idModal').classList.add('active');
 }
 function closeIdentityModal(){ $('#idModal').classList.remove('active'); }
@@ -609,11 +627,19 @@ function closeIdentityModal(){ $('#idModal').classList.remove('active'); }
 function confirmIdentity(){
   const val = $('#idSelect').value.trim().toUpperCase();
   if(!val){ return; }
-  const rec = teamMembers.find(t=>t.initials===val);
-  if(!rec){ return; }
-  rec.status = 'present';             // mark attendance
-  saveTeam(teamMembers);
-  setUser(val);
+
+  if(val==='OBSERVER'){
+    // Observer: no attendance change
+    setUser('OBSERVER');
+  }else{
+    // Mark attendance present
+    const rec = teamMembers.find(t=>t.initials===val);
+    if(!rec){ return; }
+    rec.status = 'present';
+    saveTeam(teamMembers);
+    setUser(val);
+  }
+
   updateNav();
   renderTeam(); renderMd(); renderVote();
   closeIdentityModal();

@@ -8,7 +8,7 @@
 <style>
   :root{
     --bg:#0a0a0c; --panel:#111214; --panel2:#0e0f11;
-    --ink:#f0f0f2; --muted:#b6b8bd;
+    --ink:#f3f3f4; --muted:#b6b8bd;
     --accent:#ff7a00; --accent-rgb:255,122,0;
     --ok:#35d07f; --warn:#ffd166; --err:#ef476f;
   }
@@ -100,19 +100,24 @@
   .pill.idle{background:rgba(255,255,255,.07); color:#ddd}
   .pill.closed{background:rgba(53,208,127,.15); color:#c9f3df; border-color:rgba(53,208,127,.45)}
 
-  /* MD mini-panel (only KG) */
+  /* KG mini-panel */
   .md-panel{
     margin-top:10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
     padding:10px; border-radius:12px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.12)
   }
   .md-panel .stat{padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); color:var(--muted); font-weight:800}
 
-  /* Drumroll overlay */
-  .drumroll{
-    position:fixed; inset:0; background:radial-gradient(120% 120% at 50% -10%, rgba(255,122,0,.15), transparent 50%), rgba(0,0,0,.9);
-    z-index:5000; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px;
-    text-align:center; backdrop-filter: blur(2px);
+  /* Overlay: identity + drumroll */
+  .overlay{
+    position:fixed; inset:0; background:radial-gradient(120% 120% at 50% -10%, rgba(255,122,0,.15), transparent 50%), rgba(0,0,0,.88);
+    z-index:5000; display:none; align-items:center; justify-content:center; flex-direction:column; gap:14px;
+    text-align:center; backdrop-filter: blur(2px); padding:16px;
   }
+  .overlay.active{display:flex;}
+  .overlay .box{background:#111214; border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:18px; width:min(420px,90vw); box-shadow:0 20px 40px rgba(0,0,0,.5)}
+  .overlay h3{margin:0 0 8px 0}
+  .overlay .row{margin-top:10px}
+
   .drumroll-text{font-size:28px; letter-spacing:3px; color:var(--muted); text-transform:uppercase}
   .countdown{font-size:64px; font-weight:900; letter-spacing:4px}
   .drumroll-bar{width:min(520px, 86vw); height:14px; background:rgba(255,255,255,.1); border-radius:999px; overflow:hidden; outline:1px solid rgba(255,255,255,.15)}
@@ -122,9 +127,7 @@
   .winner-name{font-size:36px; font-weight:900; padding:8px 14px; border-radius:12px; background:rgba(255,255,255,.06); outline:1px solid rgba(255,255,255,.15)}
   .confetti{position:fixed; pointer-events:none; z-index:6000; width:8px; height:14px; opacity:.95}
 
-  /* Admin password note (client-side hint only) */
   .note{font-size:12px; color:var(--muted)}
-
   .hide{display:none !important}
 </style>
 </head>
@@ -182,7 +185,7 @@
         <div class="panel">
           <h3 id="resultsTitle">Results</h3>
           <div id="resultsHint" class="muted">Results are hidden until the winner is revealed.</div>
-          <div id="teamBars"></div>
+          <div id="teamBars" class="hide"></div>
         </div>
       </div>
     </section>
@@ -190,29 +193,35 @@
     <!-- VOTE -->
     <section id="view-vote" class="panel hide">
       <h2>Vote</h2>
-      <div class="sub">First, confirm your identity to mark attendance. You’ll then be able to vote (when voting is open).</div>
+      <div class="sub">You’ll first confirm your identity (once), then pick your Star Player. Self-votes are blocked. KG cannot vote.</div>
 
       <div class="grid cols-2">
         <div class="panel">
-          <label for="idSelect">I am</label>
-          <select id="idSelect"></select>
+          <h3>Identity</h3>
+          <div id="idSummary" class="muted">You are: <b id="idWho"></b></div>
           <div class="row" style="margin-top:10px">
-            <button class="btn accent" id="confirmIdentity">Confirm identity</button>
-            <button class="btn" id="clearIdentity">Clear</button>
+            <button class="btn" id="changeIdentity">Change identity</button>
           </div>
-          <div id="idMsg" class="muted" style="margin-top:10px"></div>
+          <p class="note" style="margin-top:8px">Identity persists on this device.</p>
         </div>
 
         <div class="panel" id="votePanel">
-          <h3>Cast your vote</h3>
-          <div id="voteGuard" class="muted">Confirm your identity first.</div>
+          <h3>Ballot</h3>
+          <div id="voteGuard" class="muted">Confirm your identity to proceed.</div>
           <div id="voteForm" class="hide">
             <label for="voteFor">I vote for</label>
             <select id="voteFor"></select>
+
             <div class="row" style="margin-top:10px">
-              <button class="btn accent" id="submitVote">Submit Vote</button>
+              <button class="btn" id="confirmPick">Confirm pick</button>
+              <button class="btn" id="editPick" disabled>Change</button>
+            </div>
+
+            <div class="row" style="margin-top:8px">
+              <button class="btn accent" id="submitVote" disabled>Submit Vote</button>
               <button class="btn" id="clearPick">Clear</button>
             </div>
+
             <div id="voteMsg" class="muted" style="margin-top:10px"></div>
           </div>
         </div>
@@ -239,16 +248,27 @@
         <div class="panel">
           <h3>Attendance</h3>
           <div id="adminAttendance"></div>
-          <div class="sep"></div>
-          <div class="row">
-            <button class="btn" id="exportCsv">Export CSV</button>
-          </div>
           <div id="adminMsg" class="muted" style="margin-top:10px"></div>
         </div>
       </div>
     </section>
   </main>
 </div>
+
+<!-- Identity modal (blocking on first load) -->
+<div class="overlay" id="identityModal" aria-hidden="true">
+  <div class="box">
+    <h3>Confirm your identity</h3>
+    <label for="idModalSelect">Choose your initials</label>
+    <select id="idModalSelect"></select>
+    <div class="row">
+      <button class="btn accent" id="idModalConfirm">Confirm identity</button>
+    </div>
+    <p class="note" style="margin-top:8px">You only need to do this once per device.</p>
+  </div>
+</div>
+
+<!-- Reveal overlay (created dynamically when used) -->
 
 <script>
 /* =========================
@@ -262,7 +282,7 @@ const LS = {
   phase:'bf_phase' // 'not_started' | 'open' | 'revealed'
 };
 
-// Default team from your list
+// Default team
 const DEFAULT_MEMBERS = [
   {name:'Olwethu',     initials:'OB', status:'absent'},
   {name:'Christopher', initials:'CB', status:'absent'},
@@ -305,6 +325,8 @@ function setPhase(p){ localStorage.setItem(LS.phase, p); renderPhase(); renderTe
 let teamMembers = loadTeam();     // [{name,initials,status}]
 let votes = loadVotes();          // {initials: count}
 let votedInitials = loadVoted();  // ["JV","KG",...]
+let selectedPick = '';            // current ballot selection (initials)
+let pickConfirmed = false;        // two-step confirm flag
 
 /* =========================
    Utilities
@@ -332,11 +354,10 @@ function tallies(){
 }
 function updateNav(){
   const u = getUser();
-  $('#whoAmIText').textContent = u ? `You are: ${u}` : '';
+  const rec = teamMembers.find(x=>x.initials===u);
+  $('#whoAmIText').textContent = u ? `You are: ${rec?rec.name:u}` : '';
   // Admin nav only if ZS
-  const isZS = u==='ZS';
-  const adminBtn = $('#adminNav');
-  adminBtn.classList.toggle('hide', !isZS);
+  $('#adminNav').classList.toggle('hide', u!=='ZS');
 }
 
 /* =========================
@@ -356,7 +377,6 @@ function renderPhase(){
     pill.className='pill closed'; pill.textContent='Closed';
     text.textContent='Winner revealed';
   }
-  // results visibility
   const revealed = phase==='revealed';
   $('#resultsHint').classList.toggle('hide', revealed);
   $('#teamBars').classList.toggle('hide', !revealed);
@@ -409,43 +429,38 @@ function renderMd(){
   $('#mdVotes').textContent = voted;
 
   const phase = getPhase();
-  const btnStart = $('#btnStart');
-  const btnReveal = $('#btnReveal');
-  btnStart.classList.toggle('hide', phase!=='not_started');
-  btnReveal.classList.toggle('hide', phase!=='open');
+  $('#btnStart').classList.toggle('hide', phase!=='not_started');
+  $('#btnReveal').classList.toggle('hide', phase!=='open');
 }
 
 /* Start + Reveal (KG only) */
-function mdStartVoting(){
-  setPhase('open');
-}
+function mdStartVoting(){ setPhase('open'); }
 function mdReveal(){
-  // close phase immediately so new votes can't slip in
-  setPhase('revealed');
+  setPhase('revealed'); // lock immediately
   revealOverlay();
 }
 
-/* 10s overlay */
+/* 10s drum-roll overlay */
 function revealOverlay(){
   const data = resultsData();
   const top = Math.max(0, ...data.map(d=>d.votes));
   if(top===0){
-    // still show overlay for effect, but “no votes”
     const overlay = document.createElement('div');
-    overlay.className='drumroll';
-    overlay.innerHTML = `<div class="winner-reveal"><div class="winner-title">No votes cast</div></div>`;
+    overlay.className='overlay active';
+    overlay.innerHTML = `<div class="box"><div class="winner-reveal"><div class="winner-title">No votes cast</div></div></div>`;
     document.body.appendChild(overlay);
     setTimeout(()=>overlay.remove(), 2000);
     return;
   }
-
   const winners = data.filter(d=>d.votes===top);
   const overlay = document.createElement('div');
-  overlay.className = 'drumroll';
+  overlay.className = 'overlay active';
   overlay.innerHTML = `
-    <div class="drumroll-text">Drum roll…</div>
-    <div class="countdown" id="dr-count">10</div>
-    <div class="drumroll-bar"><div class="bar-fill" id="dr-fill"></div></div>
+    <div class="box" style="text-align:center">
+      <div class="drumroll-text">Drum roll…</div>
+      <div class="countdown" id="dr-count">10</div>
+      <div class="drumroll-bar"><div class="bar-fill" id="dr-fill"></div></div>
+    </div>
   `;
   document.body.appendChild(overlay);
 
@@ -458,13 +473,14 @@ function revealOverlay(){
     remain -= 1;
     num.textContent = remain;
     fill.style.width = `${(10 - remain) * 10}%`;
-    overlay.style.transform = remain%2===0 ? 'translateY(-2px)' : 'translateY(0)';
     if(remain <= 0){
       clearInterval(tick);
       overlay.innerHTML = `
-        <div class="winner-reveal">
-          <div class="winner-title">Star Player</div>
-          <div class="winner-name">${winners.map(w=>w.name).join(' & ')}</div>
+        <div class="box" style="text-align:center">
+          <div class="winner-reveal">
+            <div class="winner-title">Star Player</div>
+            <div class="winner-name">${winners.map(w=>w.name).join(' & ')}</div>
+          </div>
         </div>
       `;
       for(let i=0;i<150;i++) spawnConfetti();
@@ -487,6 +503,8 @@ function spawnConfetti(){
   el.style.background = colors[Math.floor(Math.random()*colors.length)];
   el.style.transform = `rotate(${rot}deg)`;
   el.style.opacity = .95;
+  el.style.position = 'fixed';
+  el.style.zIndex = 6000;
   el.style.transition = `transform ${dur}s cubic-bezier(.2,.9,.2,1.05), top ${dur}s cubic-bezier(.2,.9,.2,1.05), opacity ${dur}s linear`;
   document.body.appendChild(el);
   requestAnimationFrame(()=>{
@@ -498,93 +516,98 @@ function spawnConfetti(){
 }
 
 /* =========================
-   VOTE (identity-first)
+   VOTE (two-step)
 ========================= */
 function renderVote(){
   const u = getUser();
-
-  // Populate identity list
-  const idSel = $('#idSelect');
-  idSel.innerHTML = '<option value="">Select your name…</option>' +
-    teamMembers.map(m=>`<option value="${m.initials}" ${u===m.initials?'selected':''}>${m.name} — ${m.initials}</option>`).join('');
-
-  // Post-identity rules
+  const rec = teamMembers.find(x=>x.initials===u);
+  $('#idWho').textContent = rec ? `${rec.name} (${rec.initials})` : '—';
   $('#voteGuard').classList.toggle('hide', !!u);
   $('#voteForm').classList.toggle('hide', !u);
 
-  // Special experiences
+  // KG cannot vote
   if(u==='KG'){
-    $('#voteGuard').textContent = 'Hi KG. Use Team View to start voting and reveal the winner.';
-  }else if(u==='ZS'){
-    $('#voteGuard').textContent = 'Hi ZS. Admin is available in the top-right.';
-  }else if(!u){
-    $('#voteGuard').textContent = 'Confirm your identity to proceed.';
-  }else{
-    const phase = getPhase();
-    if(phase==='not_started'){ $('#voteGuard').textContent = 'Voting has not started yet.'; }
-    if(phase==='revealed'){ $('#voteGuard').textContent = 'Voting is closed.'; }
+    $('#voteGuard').textContent = 'Hi KG. You cannot vote. Use Team View to start and reveal.';
+    $('#voteForm').classList.add('hide');
+    return;
   }
 
-  // Ballot list (present teammates, excluding self)
-  const ballot = teamMembers.filter(m=>m.status==='present' && m.initials!==u);
-  $('#voteFor').innerHTML = '<option value="">Select a teammate…</option>' +
-    ballot.map(m=>`<option value="${m.initials}">${m.name} — ${m.initials}</option>`).join('');
+  // Phase guards
+  const phase = getPhase();
+  if(!u){ $('#voteGuard').textContent = 'Confirm your identity to proceed.'; return; }
+  if(phase==='not_started'){ $('#voteGuard').textContent = 'Voting has not started yet.'; return; }
+  if(phase==='revealed'){ $('#voteGuard').textContent = 'Voting is closed.'; return; }
 
-  // Voted state message
+  // If user already voted
   const msg = $('#voteMsg');
-  if(u && votedInitials.includes(u)) msg.textContent = 'You have already voted.';
-  else msg.textContent = '';
+  if(votedInitials.includes(u)){
+    $('#voteForm').classList.add('hide');
+    $('#voteGuard').classList.remove('hide');
+    $('#voteGuard').textContent = 'You have already voted.';
+    return;
+  } else {
+    $('#voteGuard').classList.add('hide');
+    $('#voteForm').classList.remove('hide');
+  }
+
+  // Build ballot: everyone except self (no presence filter)
+  const ballot = teamMembers.filter(m=>m.initials!==u);
+  const sel = $('#voteFor');
+  sel.innerHTML = '<option value="">Select a teammate…</option>' +
+    ballot.map(m=>`<option value="${m.initials}">${m.name} — ${m.initials}</option>`).join('');
+  // restore selection / lock state
+  sel.value = selectedPick || '';
+  sel.disabled = pickConfirmed;
+
+  // Buttons
+  $('#confirmPick').disabled = !sel.value || pickConfirmed;
+  $('#editPick').disabled = !pickConfirmed;
+  $('#submitVote').disabled = !pickConfirmed;
+  msg.textContent = pickConfirmed && sel.value ? `Confirming vote for ${ballot.find(x=>x.initials===sel.value)?.name || sel.value}.` : '';
 }
 
-function confirmIdentity(){
-  const val = $('#idSelect').value.trim().toUpperCase();
-  const msg = $('#idMsg');
-  if(!val){ msg.textContent = 'Please select your name.'; return; }
-
-  // Mark attendance present
-  const rec = teamMembers.find(t=>t.initials===val);
-  if(!rec){ msg.textContent = 'Unknown selection.'; return; }
-  rec.status = 'present';
-  saveTeam(teamMembers);
-
-  setUser(val);
-  msg.textContent = `Identity confirmed: ${rec.name} (${rec.initials}).`;
-  updateNav();
-  renderTeam(); renderMd(); renderVote(); renderPhase();
+function onPickChange(){
+  selectedPick = $('#voteFor').value.trim().toUpperCase();
+  pickConfirmed = false;
+  renderVote();
 }
-
-function clearIdentity(){
-  setUser('');
-  $('#idMsg').textContent = 'Identity cleared on this device.';
-  renderVote(); renderMd(); updateNav();
+function confirmPick(){
+  if(!selectedPick){ return; }
+  pickConfirmed = true;
+  renderVote();
+}
+function editPick(){
+  pickConfirmed = false;
+  renderVote();
+}
+function clearPick(){
+  selectedPick = '';
+  pickConfirmed = false;
+  $('#voteMsg').textContent = '';
+  renderVote();
 }
 
 function voteSubmit(){
   const u = getUser();
   const msg = $('#voteMsg');
-
   if(!u){ msg.textContent='Confirm identity first.'; return; }
-  if(u==='KG'){ msg.textContent='KG does not vote. Use Team View to manage the reveal.'; return; }
-  if(u==='ZS'){ /* allow ZS to vote as well */ }
-
+  if(u==='KG'){ msg.textContent='KG does not vote.'; return; }
   if(getPhase()!=='open'){ msg.textContent='Voting is not open.'; return; }
   if(votedInitials.includes(u)){ msg.textContent='You have already voted.'; return; }
+  if(!pickConfirmed || !selectedPick){ msg.textContent='Confirm your pick first.'; return; }
+  if(selectedPick===u){ msg.textContent='Self-votes are not allowed.'; return; }
 
-  const pick = $('#voteFor').value.trim().toUpperCase();
-  if(!pick){ msg.textContent='Select your pick.'; return; }
-  if(pick===u){ msg.textContent='Self-votes are not allowed.'; return; }
-
-  const pickRec = teamMembers.find(t=>t.initials===pick && t.status==='present');
-  if(!pickRec){ msg.textContent='Selected teammate is not present.'; return; }
-
-  votes[pick] = (votes[pick]||0) + 1;
+  // Record anonymous vote for the chosen initials
+  votes[selectedPick] = (votes[selectedPick]||0) + 1;
   votedInitials.push(u);
   saveVotes(votes); saveVoted(votedInitials);
+
+  // Reset local state
+  selectedPick = ''; pickConfirmed = false;
 
   msg.textContent = 'Vote recorded. Thank you!';
   renderTeam(); renderMd(); renderVote();
 }
-function clearPick(){ $('#voteFor').value=''; $('#voteMsg').textContent=''; }
 
 /* =========================
    ADMIN (ZS only)
@@ -644,48 +667,70 @@ function newSession(){
   renderTeam(); renderVote(); renderMd(); renderPhase();
 }
 
-function exportCsv(){
-  const rows = [['Initials','Name','Votes']];
-  for(const t of teamMembers){ rows.push([t.initials, t.name, String(votes[t.initials]||0)]); }
-  const csv = rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\r\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'blacfox-star-player.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+/* =========================
+   Identity modal
+========================= */
+function openIdentityModal(){
+  const modal = $('#identityModal');
+  const sel = $('#idModalSelect');
+  sel.innerHTML = '<option value="">Select your initials…</option>' +
+    teamMembers.map(m=>`<option value="${m.initials}">${m.name} — ${m.initials}</option>`).join('');
+  modal.classList.add('active');
+}
+function closeIdentityModal(){ $('#identityModal').classList.remove('active'); }
+function confirmIdentityFromModal(){
+  const val = $('#idModalSelect').value.trim().toUpperCase();
+  if(!val) return;
+
+  // Mark present
+  const rec = teamMembers.find(t=>t.initials===val);
+  if(!rec) return;
+  rec.status = 'present';
+  saveTeam(teamMembers);
+
+  setUser(val);
+  closeIdentityModal();
+  renderTeam(); renderMd(); renderVote(); renderPhase();
 }
 
 /* =========================
    Events & Init
 ========================= */
 $$('nav .btn[data-view]').forEach(b=> b.addEventListener('click', e=> showView(e.target.getAttribute('data-view'))));
-// MD buttons
+// KG controls
 $('#btnStart').addEventListener('click', mdStartVoting);
 $('#btnReveal').addEventListener('click', mdReveal);
 
-// Vote events
-$('#confirmIdentity').addEventListener('click', confirmIdentity);
-$('#clearIdentity').addEventListener('click', clearIdentity);
+// Vote
+$('#voteFor').addEventListener('change', onPickChange);
+$('#confirmPick').addEventListener('click', confirmPick);
+$('#editPick').addEventListener('click', editPick);
 $('#submitVote').addEventListener('click', voteSubmit);
 $('#clearPick').addEventListener('click', clearPick);
+$('#changeIdentity').addEventListener('click', openIdentityModal);
 
-// Admin nav visibility depends on identity (handled in updateNav)
+// Admin nav depends on identity (handled in updateNav)
 $('#adminNav').addEventListener('click', ()=> showView('admin'));
 
 // Admin actions
 $('#saveTeam').addEventListener('click', saveTeamFromArea);
 $('#resetSession').addEventListener('click', newSession);
-$('#exportCsv').addEventListener('click', exportCsv);
 
-// First render
+// Identity modal
+$('#idModalConfirm').addEventListener('click', confirmIdentityFromModal);
+
 (function init(){
+  // persist structures
   saveTeam(teamMembers); saveVotes(votes); saveVoted(votedInitials);
   updateNav();
   renderPhase();
   renderTeam();
   renderMd();
   renderVote();
-  showView('team'); // default to TV page
+  showView('team'); // TV by default
+
+  // Block until identity set
+  if(!getUser()) openIdentityModal();
 })();
 </script>
 </body>

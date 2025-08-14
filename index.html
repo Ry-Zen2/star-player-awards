@@ -65,8 +65,16 @@
 
   .wrap{position:relative; z-index:1; min-height:100%; display:flex; flex-direction:column}
 
-  /* Static header */
-  header{ background:#111214; border-bottom:1px solid rgba(255,255,255,.08); position:sticky; top:0; z-index:5 }
+  /* Static header + reveal accent bar */
+  header{ background:#111214; border-bottom:1px solid rgba(255,255,255,.08); position:sticky; top:0; z-index:5; }
+  header::after{
+    content:""; position:absolute; left:0; right:0; top:0; height:3px; opacity:0;
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(var(--accent-rgb),.95) 50%, rgba(255,255,255,0) 100%);
+    background-size:200% 100%;
+  }
+  @keyframes sweep { to { background-position:200% 0; } }
+  body.reveal-glow header::after{ opacity:1; animation: sweep 1.2s linear infinite; }
+
   .topbar{display:flex; align-items:center; gap:14px; padding:10px 16px; max-width:1100px; margin:0 auto;}
   .brand{display:flex; align-items:center; gap:10px}
   .brand img{height:38px; width:auto}
@@ -133,7 +141,11 @@
   .pill.idle{background:rgba(255,255,255,.07); color:#ddd}
   .pill.closed{background:rgba(53,208,127,.15); color:#c9f3df; border-color:rgba(53,208,127,.45)}
 
-  .qrbox{ position:absolute; right:16px; top:56px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px; z-index:2 }
+  /* QR pulse while voting open; fade during drumroll */
+  .qrbox{ position:absolute; right:16px; top:56px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px; z-index:2; transition:opacity .35s var(--ease), transform .35s var(--ease), box-shadow .35s var(--ease) }
+  @keyframes qrpulse{ 0%{ transform:scale(1); box-shadow:0 0 0 rgba(255,122,0,0) } 50%{ transform:scale(1.04); box-shadow:0 0 22px rgba(255,122,0,.22) } 100%{ transform:scale(1); box-shadow:0 0 0 rgba(255,122,0,0) } }
+  .qrbox.pulse{ animation: qrpulse 2.2s ease-in-out infinite }
+  body.reveal-glow .qrbox{ opacity:0 }
 
   /* Circular gauge */
   .gauge{
@@ -158,10 +170,19 @@
   .countdown{font-size:64px; font-weight:900; letter-spacing:4px}
   .drumroll-bar{width:min(520px, 86vw); height:14px; background:rgba(255,255,255,.1); border-radius:999px; overflow:hidden; outline:1px solid rgba(255,255,255,.15)}
   .drumroll-bar .bar-fill{height:100%; width:0%; background:linear-gradient(90deg, rgba(255,255,255,.35), rgba(var(--accent-rgb),.9)); transition:width 1s linear}
-  .winner-reveal{display:flex; flex-direction:column; align-items:center; gap:8px}
-  .winner-title{font-size:22px; color:var(--muted); text-transform:uppercase; letter-spacing:3px}
-  .winner-name{font-size:36px; font-weight:900; padding:8px 14px; border-radius:12px; background:rgba(255,255,255,.06); outline:1px solid rgba(255,255,255,.15)}
-  .co{ color:#ffd166; font-weight:800; letter-spacing:2px; text-transform:uppercase; }
+
+  /* Winner glass card */
+  .glass-card{
+    padding:16px 20px; border-radius:16px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.18);
+    box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 12px rgba(255,255,255,.04);
+    backdrop-filter: blur(10px) saturate(120%);
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+  }
+  .winner-reveal{display:flex; flex-direction:column; align-items:center; gap:12px}
+  .winner-title{font-size:22px; color:#ffd166; text-transform:uppercase; letter-spacing:3px}
+  .winner-name{font-size:36px; font-weight:900; padding:10px 16px; border-radius:12px; background:rgba(0,0,0,.25); outline:1px solid rgba(255,255,255,.15)}
 
   /* Ambient glow during reveal (Team View) */
   @keyframes glowPulse {
@@ -520,46 +541,35 @@ const SYNC = (()=>{
 
 /* ====== Web Audio: drumroll + chime ====== */
 let audioCtx=null, drumGain=null, drumOsc=null, drumNoise=null, drumFilter=null;
-function ensureAudio(){
-  if(audioCtx) return audioCtx;
-  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-  return audioCtx;
-}
+function ensureAudio(){ if(audioCtx) return audioCtx; audioCtx = new (window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
 function startDrumroll(){
-  if(!soundsEnabled) return;
+  if(localStorage.getItem(LS.snd)==='0') return;
   const ctx = ensureAudio();
-  // Noise source through bandpass ~120Hz for a soft roll
   const bufferSize = 2 * ctx.sampleRate;
   const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
   const output = noiseBuffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1; // white noise
+  for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
 
   drumNoise = ctx.createBufferSource(); drumNoise.buffer = noiseBuffer; drumNoise.loop = true;
   drumFilter = ctx.createBiquadFilter(); drumFilter.type='bandpass'; drumFilter.frequency.value=120; drumFilter.Q.value=0.9;
 
-  // Amplitude modulation to imitate roll build-up
   const trem = ctx.createOscillator(); trem.type='sine'; trem.frequency.setValueAtTime(14, ctx.currentTime);
-  const tremGain = ctx.createGain(); tremGain.gain.value = 0.6;
-  trem.connect(tremGain.gain);
+  const tremGain = ctx.createGain(); tremGain.gain.value = 0.6; trem.connect(tremGain.gain);
 
-  // Master gain ramp
   drumGain = ctx.createGain(); drumGain.gain.value = 0.0001;
   drumNoise.connect(drumFilter); drumFilter.connect(drumGain); drumGain.connect(ctx.destination);
 
-  // slight low sine underpin
   drumOsc = ctx.createOscillator(); drumOsc.type='sine'; drumOsc.frequency.value=80;
   const oscGain = ctx.createGain(); oscGain.gain.value=0.02; drumOsc.connect(oscGain); oscGain.connect(drumGain);
 
-  // apply tremolo by multiplying drumGain with tremolo signal (via AudioParam)
   trem.connect(drumGain.gain);
 
   const now = ctx.currentTime;
   drumGain.gain.cancelScheduledValues(now);
   drumGain.gain.setValueAtTime(0.0001, now);
-  drumGain.gain.exponentialRampToValueAtTime(0.22, now + 7.5); // builds up over countdown
+  drumGain.gain.exponentialRampToValueAtTime(0.25, now + 9.6); // slightly longer ramp for crescendo
 
   drumNoise.start(); drumOsc.start(); trem.start();
-  // Stop safety after ~12s
   setTimeout(()=>stopDrumroll(false), 12000);
 }
 function stopDrumroll(playChime=true){
@@ -575,7 +585,7 @@ function stopDrumroll(playChime=true){
   }, 220);
 }
 function chime(){
-  if(!soundsEnabled) return;
+  if(localStorage.getItem(LS.snd)==='0') return;
   const ctx = ensureAudio();
   const g = ctx.createGain(); g.gain.value=0.0001; g.connect(ctx.destination);
   const o1 = ctx.createOscillator(); o1.type='triangle'; o1.frequency.value=880;
@@ -630,7 +640,7 @@ function updateNav(){
   const link = $('#changeId'); if(link) link.addEventListener('click', e=>{ e.preventDefault(); openIdentityModal(); });
 
   // sound toggle icon state
-  $('#soundToggle').textContent = soundsEnabled ? '🔊' : '🔇';
+  $('#soundToggle').textContent = (localStorage.getItem(LS.snd) === '0') ? '🔇' : '🔊';
 }
 
 /* TEAM VIEW */
@@ -644,6 +654,10 @@ function renderPhase(){
   $('#resultsHint').classList.toggle('hide', revealed);
   $('#teamBars').classList.toggle('hide', !revealed);
   $('#resultsTitle').textContent = revealed ? 'Results' : 'Results (hidden)';
+
+  // QR pulse while open (Observer only)
+  const qb = $('#qrBox');
+  if(qb){ qb.classList.toggle('pulse', p==='open' && getUser()==='OBSERVER'); }
 }
 
 function renderTeam(){
@@ -763,10 +777,17 @@ function revealOverlaySync(serverTs){
   const timer = setInterval(()=>{
     remain -= 1; if(remain<0) remain=0;
     num.textContent = remain; fill.style.width = `${(10-remain)*10}%`;
+
+    // Crescendo confetti in the last 2 seconds
+    if(remain === 2 || remain === 1){
+      const mult = confettiMultiplier();
+      for(let i=0;i<Math.round(24*mult);i++) spawnConfetti();
+    }
+
     if(remain<=0){ clearInterval(timer);
       stopDrumroll(true);
       const co = winners.length>1;
-      o.innerHTML = `<div class="winner-reveal">${co?'<div class="winner-title co">Co-Winners</div>':'<div class="winner-title">Star Player</div>'}<div class="winner-name">${winners.map(w=>w.name).join(co?' • ':' & ')}</div></div>`;
+      o.innerHTML = `<div class="glass-card winner-reveal">${co?'<div class="winner-title">Co-Winners</div>':'<div class="winner-title">Star Player</div>'}<div class="winner-name">${winners.map(w=>w.name).join(co?' • ':' & ')}</div></div>`;
       const mult = confettiMultiplier(); const count = Math.round((co?120:150) * mult);
       if(mult>0){ for(let i=0;i<count;i++) spawnConfetti(co?{half:i%2===0?'left':'right'}:{}); }
       setTimeout(()=>{ o.remove(); document.body.classList.remove('reveal-glow'); }, 6000);
@@ -914,11 +935,10 @@ function saveTeamFromArea(){
 function toggleFullscreen(){ const doc=document; const el=document.documentElement; if(!doc.fullscreenElement){ el.requestFullscreen?.(); } else { doc.exitFullscreen?.(); } }
 $('#fsToggle').addEventListener('click', toggleFullscreen);
 $('#soundToggle').addEventListener('click', ()=>{
-  soundsEnabled = !soundsEnabled;
-  localStorage.setItem(LS.snd, soundsEnabled ? '1':'0');
+  const off = localStorage.getItem(LS.snd) === '0';
+  localStorage.setItem(LS.snd, off ? '1' : '0');
   updateNav();
-  // iOS/Chrome auto-unlock audio after a gesture
-  if(soundsEnabled){ try{ ensureAudio().resume(); }catch{} }
+  if(off){ try{ ensureAudio().resume(); }catch{} }
 });
 
 /* Hash routes + nav */

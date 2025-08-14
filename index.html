@@ -19,6 +19,10 @@
 <meta name="twitter:description" content="Vote, reveal, celebrate: the Blacfox Star Player mini-app." />
 <meta name="twitter:image" content="logo.png" />
 
+<!-- Fonts: sleek headings, retro UI chrome -->
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800&display=swap" rel="stylesheet">
+
 <!-- Firebase (compat builds) -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -28,8 +32,7 @@
     --bg:#0a0a0c; --panel:#111214; --panel2:#0e0f11;
     --ink:#f0f0f2; --muted:#b6b8bd;
     --accent:#ff7a00; --accent-rgb:255,122,0;
-    --ring:#f7b98a;
-    --ease:cubic-bezier(.2,.9,.2,1.02);
+    --ring:#f7b98a; --ease:cubic-bezier(.2,.9,.2,1.02);
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -38,6 +41,8 @@
     font:15px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     letter-spacing:.2px;
   }
+  h1,h2,h3{font-family:Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; letter-spacing:.2px}
+  h1{font-weight:800} h2{font-weight:800} h3{font-weight:700}
 
   /* 5s Terminal loading screen */
   .boot{position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; background:#000; color:#fff}
@@ -50,13 +55,11 @@
   .boot.hide{animation:fadeOut .3s ease forwards}
   @keyframes fadeOut{to{opacity:0; visibility:hidden}}
 
-  /* Watermark (non-faint image) */
-  .wm {
-    position: fixed; inset:0; pointer-events:none; z-index:0;
+  /* Watermark */
+  .wm { position: fixed; inset:0; pointer-events:none; z-index:0;
     background: url("blacfox-watermark.png") no-repeat center;
     background-size: clamp(340px, 46vw, 700px);
-    mix-blend-mode: soft-light;
-    filter: drop-shadow(0 0 8px rgba(0,0,0,.35));
+    mix-blend-mode: soft-light; filter: drop-shadow(0 0 8px rgba(0,0,0,.35));
     opacity: 0.25;
   }
 
@@ -67,7 +70,7 @@
   .topbar{display:flex; align-items:center; gap:14px; padding:10px 16px; max-width:1100px; margin:0 auto;}
   .brand{display:flex; align-items:center; gap:10px}
   .brand img{height:38px; width:auto}
-  .brand h1{margin:0; font-size:16px; letter-spacing:.8px; text-transform:uppercase}
+  .brand h1{margin:0; font-size:16px; text-transform:uppercase}
   .brand h1 .dot{color:var(--accent)}
   .who{margin-left:8px; color:var(--muted); font-size:13px}
   .who a{color:var(--muted); text-decoration:underline dotted; cursor:pointer}
@@ -90,8 +93,19 @@
   .panel{ background:var(--panel); border:1px solid rgba(255,255,255,.08);
     border-radius:16px; padding:18px; margin:14px 0; box-shadow:0 10px 24px rgba(0,0,0,.20); transition: box-shadow .2s var(--ease), border-color .2s var(--ease) }
   .panel:hover{ box-shadow:0 12px 30px rgba(0,0,0,.28); border-color:rgba(255,255,255,.12) }
-  .panel h2{margin:0 0 10px 0; font-size:18px; letter-spacing:.5px}
+  .panel h2{margin:0 0 10px 0; font-size:18px}
   .sub{color:var(--muted); margin-top:-2px; margin-bottom:14px}
+
+  /* Neon underline (KG/ZS only) */
+  body.neon-allowed h2, body.neon-allowed h3{ position:relative }
+  body.neon-allowed h2::after, body.neon-allowed h3::after{
+    content:""; position:absolute; left:0; bottom:-6px; height:2px; width:100%;
+    background:linear-gradient(90deg, rgba(var(--accent-rgb),1), rgba(255,255,255,0) 70%);
+    transform:scaleX(0); transform-origin:left; transition:transform .35s var(--ease), filter .35s var(--ease);
+    filter:drop-shadow(0 0 6px rgba(255,122,0,.5));
+  }
+  body.neon-allowed h2:hover::after, body.neon-allowed h2:focus-within::after,
+  body.neon-allowed h3:hover::after, body.neon-allowed h3:focus-within::after{ transform:scaleX(1) }
 
   .grid{display:grid; gap:12px}
   @media (min-width:900px){ .grid.cols-2{grid-template-columns:1fr 1fr} }
@@ -121,11 +135,10 @@
 
   .qrbox{ position:absolute; right:16px; top:56px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px; z-index:2 }
 
-  /* Circular gauge (conic-gradient) */
+  /* Circular gauge */
   .gauge{
     width:180px; height:180px; border-radius:50%;
-    background:
-      conic-gradient(var(--accent) calc(var(--p,0)*1%), rgba(255,255,255,.08) 0);
+    background: conic-gradient(var(--accent) calc(var(--p,0)*1%), rgba(255,255,255,.08) 0);
     display:grid; place-items:center; margin:6px auto 2px; box-shadow:0 6px 22px rgba(0,0,0,.25);
     transition:background .4s var(--ease);
   }
@@ -138,9 +151,8 @@
   }
   .gauge-sub{ text-align:center; color:var(--muted); margin-top:6px; }
 
-  .confetti{position:fixed; pointer-events:none; z-index:6000; width:8px; height:14px; opacity:.95}
-
   /* Drumroll */
+  .confetti{position:fixed; pointer-events:none; z-index:6000; width:8px; height:14px; opacity:.95}
   .drumroll{position:fixed; inset:0; background:radial-gradient(120% 120% at 50% -10%, rgba(255,122,0,.15), transparent 50%), rgba(0,0,0,.9); z-index:5000; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px; text-align:center; backdrop-filter: blur(2px)}
   .drumroll-text{font-size:28px; letter-spacing:3px; color:var(--muted); text-transform:uppercase}
   .countdown{font-size:64px; font-weight:900; letter-spacing:4px}
@@ -150,6 +162,14 @@
   .winner-title{font-size:22px; color:var(--muted); text-transform:uppercase; letter-spacing:3px}
   .winner-name{font-size:36px; font-weight:900; padding:8px 14px; border-radius:12px; background:rgba(255,255,255,.06); outline:1px solid rgba(255,255,255,.15)}
   .co{ color:#ffd166; font-weight:800; letter-spacing:2px; text-transform:uppercase; }
+
+  /* Ambient glow during reveal (Team View) */
+  @keyframes glowPulse {
+    0%{ box-shadow: 0 0 0 1px rgba(255,122,0,.25), 0 0 24px rgba(255,122,0,.35), inset 0 0 40px rgba(255,122,0,.12) }
+    50%{ box-shadow: 0 0 0 1px rgba(255,122,0,.35), 0 0 40px rgba(255,122,0,.55), inset 0 0 60px rgba(255,122,0,.16) }
+    100%{ box-shadow: 0 0 0 1px rgba(255,122,0,.25), 0 0 24px rgba(255,122,0,.35), inset 0 0 40px rgba(255,122,0,.12) }
+  }
+  body.reveal-glow #view-team { animation: glowPulse 1.4s ease-in-out infinite }
 
   .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.75); z-index:4500; backdrop-filter:blur(2px)}
   .modal.active{display:flex}
@@ -183,12 +203,13 @@
         <button class="btn" id="teamNav" data-view="team">Team View</button>
         <button class="btn" id="voteNav" data-view="vote">Vote</button>
         <button class="btn ghost hide" id="adminNav" data-view="admin">Admin</button>
+        <button class="btn ghost" id="soundToggle" title="Toggle sounds">🔊</button>
       </nav>
     </div>
   </header>
 
   <main>
-    <!-- TEAM VIEW (guarded; QR only for Observer; Observer sees tally-only) -->
+    <!-- TEAM VIEW -->
     <section id="view-team" class="panel">
       <div class="row" style="justify-content:flex-end; gap:8px; margin-top:-4px">
         <button class="btn small" id="fsToggle">Full Screen</button>
@@ -259,7 +280,7 @@
     <!-- VOTE (players + ZS; NOT KG/Observer) -->
     <section id="view-vote" class="panel hide">
       <h2>Vote</h2>
-      <div class="sub">Confirm identity once (per browser tab). Pick a present teammate (not yourself) and submit.</div>
+      <div class="sub">Confirm identity once (per tab). Pick a <strong>present</strong> teammate (not yourself) and submit.</div>
 
       <div class="grid cols-2">
         <div class="panel">
@@ -306,7 +327,7 @@
             <button class="btn accent" id="saveTeam">Save Team</button>
             <button class="btn" id="resetSession">New Day</button>
           </div>
-          <p class="muted" style="margin-top:8px">Saves to the session (realtime sync) and locally for offline.</p>
+          <p class="muted" style="margin-top:8px">Saves to the session and locally for offline.</p>
           <div style="height:8px"></div>
           <label for="sessionInput">Session code (all devices must match)</label>
           <div class="row">
@@ -354,7 +375,7 @@
   </div>
 </div>
 
-<!-- PIN Modal (voters must pass if enabled) -->
+<!-- PIN Modal -->
 <div class="modal" id="pinModal" aria-hidden="true">
   <div class="modal-card">
     <h3 class="modal-title">Enter session PIN</h3>
@@ -390,7 +411,7 @@ window.BF_SYNC = {
 };
 
 /* ====== Keys & defaults ====== */
-const LS = { team:'bf_team', votes:'bf_votes', voted:'bf_voted_by', user:'bf_current_user', phase:'bf_phase', theme:'bf_theme', session:'bf_session', pinok:'bf_pinok_', drum:'bf_drum_seen_' };
+const LS = { team:'bf_team', votes:'bf_votes', voted:'bf_voted_by', user:'bf_current_user', phase:'bf_phase', theme:'bf_theme', session:'bf_session', pinok:'bf_pinok_', drum:'bf_drum_seen_', snd:'bf_sounds' };
 
 const DEFAULT_MEMBERS = [
   {name:'Olwethu',     initials:'OB', status:'absent'},
@@ -432,25 +453,23 @@ let votes = loadVotesLocal();
 let votedInitials = loadVotedLocal();
 let sessionId = (new URLSearchParams(location.search).get('s')) || localStorage.getItem(LS.session) || (window.BF_SYNC && window.BF_SYNC.sessionId) || 'demo';
 localStorage.setItem(LS.session, sessionId);
-let sessionPin = '';  // from DB
+let sessionPin = '';
 let pinEnabled = false;
 let lastDrumSeen = Number(localStorage.getItem(LS.drum + sessionId) || 0);
+let soundsEnabled = localStorage.getItem(LS.snd) !== '0';
 
 /* ====== Firebase Sync ====== */
 const SYNC = (()=>{
   let enabled = false, db=null, rootRef=null; const listeners=[];
   function init(){
     const cfg = window.BF_SYNC || {};
-    if(!cfg.firebaseConfig || !cfg.firebaseConfig.apiKey || !cfg.sessionId){ return; }
+    if(!cfg.firebaseConfig || !cfg.sessionId){ return; }
     try{ firebase.apps.length ? firebase.app() : firebase.initializeApp(cfg.firebaseConfig); }catch(e){}
     db = firebase.database(); setSession(cfg.sessionId || 'demo');
   }
   function setSession(id){
-    detach();
-    sessionId = id || 'demo';
-    localStorage.setItem(LS.session, sessionId);
-    rootRef = db.ref('sessions/'+sessionId);
-    enabled = true;
+    detach(); sessionId = id || 'demo'; localStorage.setItem(LS.session, sessionId);
+    rootRef = db.ref('sessions/'+sessionId); enabled = true;
     attach(rootRef.child('phase'), s=> { if(s.exists()) setPhaseLocal(s.val()); });
     attach(rootRef.child('team'),  s=> { teamMembers = s.val() || DEFAULT_MEMBERS.slice(); saveTeamLocal(teamMembers); renderAll(); });
     attach(rootRef.child('votes'), s=> { votes = s.val() || {}; saveVotesLocal(votes); renderTeam(); renderMd(); renderObserverTally(); renderPlayerGauge(); });
@@ -458,7 +477,6 @@ const SYNC = (()=>{
     attach(rootRef.child('pin'), s=> { sessionPin = (s.val() || '').toString(); updatePinUi(); });
     attach(rootRef.child('pinEnabled'), s=> { pinEnabled = !!s.val(); updatePinUi(); renderVote(); });
     attach(rootRef.child('revealStartAt'), s=> { const ts = Number(s.val()||0); if(ts && ts!==lastDrumSeen){ lastDrumSeen = ts; localStorage.setItem(LS.drum + sessionId, String(ts)); revealOverlaySync(ts); } });
-
     rootRef.once('value').then(s=>{
       if(!s.child('team').exists()) rootRef.child('team').set(teamMembers);
       if(!s.child('votes').exists()) rootRef.child('votes').set(votes);
@@ -500,14 +518,84 @@ const SYNC = (()=>{
   return { init, setSession, setPhase, saveTeam, resetSessionAndAttendance, generatePin, setPinEnabled, voteTransaction, triggerReveal, get enabled(){ return enabled; } };
 })();
 
+/* ====== Web Audio: drumroll + chime ====== */
+let audioCtx=null, drumGain=null, drumOsc=null, drumNoise=null, drumFilter=null;
+function ensureAudio(){
+  if(audioCtx) return audioCtx;
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+function startDrumroll(){
+  if(!soundsEnabled) return;
+  const ctx = ensureAudio();
+  // Noise source through bandpass ~120Hz for a soft roll
+  const bufferSize = 2 * ctx.sampleRate;
+  const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const output = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1; // white noise
+
+  drumNoise = ctx.createBufferSource(); drumNoise.buffer = noiseBuffer; drumNoise.loop = true;
+  drumFilter = ctx.createBiquadFilter(); drumFilter.type='bandpass'; drumFilter.frequency.value=120; drumFilter.Q.value=0.9;
+
+  // Amplitude modulation to imitate roll build-up
+  const trem = ctx.createOscillator(); trem.type='sine'; trem.frequency.setValueAtTime(14, ctx.currentTime);
+  const tremGain = ctx.createGain(); tremGain.gain.value = 0.6;
+  trem.connect(tremGain.gain);
+
+  // Master gain ramp
+  drumGain = ctx.createGain(); drumGain.gain.value = 0.0001;
+  drumNoise.connect(drumFilter); drumFilter.connect(drumGain); drumGain.connect(ctx.destination);
+
+  // slight low sine underpin
+  drumOsc = ctx.createOscillator(); drumOsc.type='sine'; drumOsc.frequency.value=80;
+  const oscGain = ctx.createGain(); oscGain.gain.value=0.02; drumOsc.connect(oscGain); oscGain.connect(drumGain);
+
+  // apply tremolo by multiplying drumGain with tremolo signal (via AudioParam)
+  trem.connect(drumGain.gain);
+
+  const now = ctx.currentTime;
+  drumGain.gain.cancelScheduledValues(now);
+  drumGain.gain.setValueAtTime(0.0001, now);
+  drumGain.gain.exponentialRampToValueAtTime(0.22, now + 7.5); // builds up over countdown
+
+  drumNoise.start(); drumOsc.start(); trem.start();
+  // Stop safety after ~12s
+  setTimeout(()=>stopDrumroll(false), 12000);
+}
+function stopDrumroll(playChime=true){
+  if(!audioCtx) return;
+  const now = audioCtx.currentTime;
+  if(drumGain){
+    try{ drumGain.gain.cancelScheduledValues(now); drumGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2); }catch{}
+  }
+  setTimeout(()=>{
+    try{ drumNoise && drumNoise.stop(); drumOsc && drumOsc.stop(); }catch{}
+    drumNoise=drumOsc=drumGain=drumFilter=null;
+    if(playChime) chime();
+  }, 220);
+}
+function chime(){
+  if(!soundsEnabled) return;
+  const ctx = ensureAudio();
+  const g = ctx.createGain(); g.gain.value=0.0001; g.connect(ctx.destination);
+  const o1 = ctx.createOscillator(); o1.type='triangle'; o1.frequency.value=880;
+  const o2 = ctx.createOscillator(); o2.type='triangle'; o2.frequency.value=1320;
+  o1.connect(g); o2.connect(g);
+  const now = ctx.currentTime;
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.25, now+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, now+0.8);
+  o1.start(now); o2.start(now);
+  o1.stop(now+0.85); o2.stop(now+0.85);
+}
+
 /* ====== Helpers & UI ====== */
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 function resultsData(){ return teamMembers.map(m=>({ name:m.name, initials:m.initials, votes:Number(votes[m.initials]||0) })).sort((a,b)=>b.votes-a.votes||a.name.localeCompare(b.name)); }
 function tallies(){
   const present = teamMembers.filter(m=>m.status==='present').length;
-  // Eligible VOTERS exclude KG (doesn't vote) and Observer (not in team list anyway).
-  const eligible = teamMembers.filter(m=>m.status==='present' && m.initials!=='KG').length;
+  const eligible = teamMembers.filter(m=>m.status==='present' && m.initials!=='KG').length; // voters exclude KG
   const voted = new Set(votedInitials).size;
   return { total:teamMembers.length, present, eligible, absent:teamMembers.length-present, voted };
 }
@@ -530,15 +618,19 @@ function showView(id){
 /* Nav + visibility */
 function updateNav(){
   const u = getUser();
+  document.body.classList.toggle('neon-allowed', u==='KG' || u==='ZS');
   $('#whoAmIText').innerHTML = !u ? `<a id="changeId">Set identity</a>` : (u==='OBSERVER' ? `You are: Observer (<a id="changeId">change</a>)` : `You are: ${u} (<a id="changeId">change</a>)`);
   const canTeam = ['KG','ZS','OBSERVER'].includes(u);
   const isZS = u==='ZS';
   const isKG = u==='KG';
   $('#teamNav').classList.toggle('hide', !canTeam);
   $('#adminNav').classList.toggle('hide', !isZS);
-  // Vote console for everyone EXCEPT KG and Observer (ZS now sees Vote)
+  // Vote console visible to all except KG and Observer
   $('#voteNav').classList.toggle('hide', isKG || u==='OBSERVER');
   const link = $('#changeId'); if(link) link.addEventListener('click', e=>{ e.preventDefault(); openIdentityModal(); });
+
+  // sound toggle icon state
+  $('#soundToggle').textContent = soundsEnabled ? '🔊' : '🔇';
 }
 
 /* TEAM VIEW */
@@ -604,7 +696,6 @@ function renderMd(){
   $('#btnCloseReveal').classList.toggle('hide', !shouldSuggest);
   updatePinUi();
 }
-function mdStartVoting(){ SYNC.setPhase('open'); }
 function mdReveal(){ SYNC.triggerReveal(); }
 
 /* Observer tally gauge */
@@ -617,7 +708,7 @@ function renderObserverTally(){
   if(sub){ sub.textContent = `${voted} of ${eligible} eligible votes cast`; }
 }
 
-/* Player gauge (on Vote page) */
+/* Player gauge */
 function renderPlayerGauge(){
   const {eligible, voted} = tallies();
   const pct = eligible? Math.min(100, Math.round((voted/eligible)*100)) : 0;
@@ -652,13 +743,18 @@ function spawnConfetti(opts={}){ const el = document.createElement('div'); el.cl
   setTimeout(()=> el.remove(), dur*1000+500);
 }
 
-/* Drumroll overlay — synced across pages via revealStartAt */
+/* Drumroll overlay — synced via revealStartAt */
 function revealOverlaySync(serverTs){
   const now = Date.now();
   let remain = Math.max(0, Math.ceil(10 - (now - serverTs)/1000));
   const o = document.createElement('div'); o.className='drumroll';
   o.innerHTML = `<div class="drumroll-text">Drum roll…</div><div class="countdown" id="dr-count">${remain}</div><div class="drumroll-bar"><div class="bar-fill" id="dr-fill" style="width:${(10-remain)*10}%"></div></div>`;
   document.body.appendChild(o);
+
+  // Start audio + glow
+  document.body.classList.add('reveal-glow');
+  startDrumroll();
+
   const data = resultsData();
   const top = Math.max(0, ...data.map(d=>d.votes));
   const winners = data.filter(d=>d.votes===top);
@@ -668,22 +764,22 @@ function revealOverlaySync(serverTs){
     remain -= 1; if(remain<0) remain=0;
     num.textContent = remain; fill.style.width = `${(10-remain)*10}%`;
     if(remain<=0){ clearInterval(timer);
+      stopDrumroll(true);
       const co = winners.length>1;
       o.innerHTML = `<div class="winner-reveal">${co?'<div class="winner-title co">Co-Winners</div>':'<div class="winner-title">Star Player</div>'}<div class="winner-name">${winners.map(w=>w.name).join(co?' • ':' & ')}</div></div>`;
       const mult = confettiMultiplier(); const count = Math.round((co?120:150) * mult);
       if(mult>0){ for(let i=0;i<count;i++) spawnConfetti(co?{half:i%2===0?'left':'right'}:{}); }
-      setTimeout(()=>o.remove(), 6000);
+      setTimeout(()=>{ o.remove(); document.body.classList.remove('reveal-glow'); }, 6000);
     }
   },1000);
 }
 
-/* Vote UI + PIN gate (one-step submit) */
+/* Vote UI + PIN gate */
 function renderVote(){
   const u = getUser();
   $('#idStatus').textContent = u ? (u==='OBSERVER' ? 'Confirmed as Observer' : `Confirmed as ${u}`) : 'Not set';
 
   const guard = $('#voteGuard'), form  = $('#voteForm'), msg = $('#voteMsg');
-
   const showBlock = (text) => { guard.textContent = text; guard.classList.remove('hide'); form.classList.add('hide'); msg.textContent = ''; };
   const showForm  = () => { guard.classList.add('hide'); form.classList.remove('hide'); };
 
@@ -699,14 +795,12 @@ function renderVote(){
   const pinOk = localStorage.getItem(LS.pinok + sessionId) === '1';
   if(SYNC.enabled && pinEnabled && !pinOk){ openPinModal(); showBlock('Enter the session PIN to unlock voting.'); return; }
 
-  // Can vote for any PRESENT teammate except yourself (including KG if present)
   const presentChoices = teamMembers.filter(m=>m.status==='present' && m.initials!==u);
   if(presentChoices.length === 0){ showBlock('No present teammates to vote for.'); return; }
 
   $('#voteFor').innerHTML = '<option value="">Select a teammate…</option>' + presentChoices.map(m=>`<option value="${m.initials}">${m.name} — ${m.initials}</option>`).join('');
   showForm();
 }
-
 async function voteSubmit(){
   const u = getUser(), msg = $('#voteMsg');
   const sel = ($('#voteFor').value||'').trim().toUpperCase();
@@ -740,13 +834,10 @@ function confirmIdentity(){
   const val = $('#idSelect').value.trim().toUpperCase();
   if(!val) return;
   if(val==='OBSERVER'){ setUser('OBSERVER'); closeIdentityModal(); renderAll(); ensureQr(); showView('team'); return; }
-  if(val==='ZS'){
-    pendingZS = true; openPwModal(); return;
-  }
+  if(val==='ZS'){ pendingZS = true; openPwModal(); return; }
   const rec = teamMembers.find(t=>t.initials===val); if(!rec) return;
   rec.status='present'; SYNC.saveTeam(teamMembers); setUser(val);
   closeIdentityModal(); renderAll(); ensureQr();
-  // After confirming, send players to the Vote view; send KG to Team View
   showView(val==='KG' ? 'team' : 'vote');
 }
 /* ZS password flow */
@@ -819,9 +910,16 @@ function saveTeamFromArea(){
   $('#adminMsg').textContent='Team saved. Session reset (attendance cleared).'; SYNC.resetSessionAndAttendance(); renderAll(); ensureQr();
 }
 
-/* Fullscreen */
+/* Fullscreen & sound toggle */
 function toggleFullscreen(){ const doc=document; const el=document.documentElement; if(!doc.fullscreenElement){ el.requestFullscreen?.(); } else { doc.exitFullscreen?.(); } }
 $('#fsToggle').addEventListener('click', toggleFullscreen);
+$('#soundToggle').addEventListener('click', ()=>{
+  soundsEnabled = !soundsEnabled;
+  localStorage.setItem(LS.snd, soundsEnabled ? '1':'0');
+  updateNav();
+  // iOS/Chrome auto-unlock audio after a gesture
+  if(soundsEnabled){ try{ ensureAudio().resume(); }catch{} }
+});
 
 /* Hash routes + nav */
 window.addEventListener('hashchange', ()=>{ if(location.hash==='#view-vote') showView('vote'); else if(location.hash==='#view-admin') showView('admin'); else showView('team'); });
@@ -840,7 +938,6 @@ $('#pwCancel').addEventListener('click', ()=>{ pendingZS=false; closePwModal(); 
 $('#pwOk').addEventListener('click', zsUnlock);
 $('#pinOk').addEventListener('click', checkPin);
 $('#pinCancel').addEventListener('click', closePinModal);
-/* KG-only PIN */
 $('#pinGenerate').addEventListener('click', ()=> SYNC.generatePin());
 $('#pinEnable').addEventListener('change', (e)=> SYNC.setPinEnabled(e.target.checked));
 

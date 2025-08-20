@@ -492,7 +492,7 @@ const SYNC = (()=>{
     detach(); sessionId = id || 'demo'; localStorage.setItem(LS.session, sessionId);
     rootRef = db.ref('sessions/'+sessionId); enabled = true;
     attach(rootRef.child('phase'), s=> { if(s.exists()) setPhaseLocal(s.val()); });
-    attach(rootRef.child('team'),  s=> { teamMembers = s.val() || DEFAULT_MEMBERS.slice(); saveTeamLocal(teamMembers); renderAll(); });
+    attach(rootRef.child('team'),  s=> { teamMembers = s.val() || DEFAULT_MEMBERS.slice(); saveTeamLocal(teamMembers); renderCore(); });
     attach(rootRef.child('votes'), s=> { votes = s.val() || {}; saveVotesLocal(votes); renderTeam(); renderMd(); renderObserverTally(); renderPlayerGauge(); });
     attach(rootRef.child('votedBy'), s=> { votedInitials = Object.keys(s.val()||{}); saveVotedLocal(votedInitials); renderTeam(); renderMd(); renderVote(); renderObserverTally(); renderPlayerGauge(); });
     attach(rootRef.child('pin'), s=> { sessionPin = (s.val() || '').toString(); updatePinUi(); });
@@ -510,12 +510,12 @@ const SYNC = (()=>{
   function detach(){ listeners.forEach(({ref, fn})=> ref.off('value', fn)); listeners.length=0; }
 
   function setPhase(p){ if(!enabled) return setPhaseLocal(p); return rootRef.child('phase').set(p); }
-  function saveTeam(t){ if(!enabled){ saveTeamLocal(t); renderAll(); return; } return rootRef.child('team').set(t); }
+  function saveTeam(t){ if(!enabled){ saveTeamLocal(t); renderCore(); return; } return rootRef.child('team').set(t); }
   function resetSessionAndAttendance(){
     const cleared = teamMembers.map(m=>({name:m.name, initials:m.initials, status:'absent'}));
     if(!enabled){
       teamMembers = cleared; saveTeamLocal(teamMembers);
-      votes={}; votedInitials=[]; saveVotesLocal(votes); saveVotedLocal(votedInitials); setPhaseLocal('not_started'); renderAll(); return;
+      votes={}; votedInitials=[]; saveVotesLocal(votes); saveVotedLocal(votedInitials); setPhaseLocal('not_started'); renderCore(); return;
     }
     return rootRef.update({ votes:{}, votedBy:{}, phase:'not_started', revealStartAt:null, team: cleared });
   }
@@ -525,12 +525,13 @@ const SYNC = (()=>{
     if(!enabled){
       if(votedInitials.includes(voterInitials)) throw new Error('already_voted');
       votes[pickInitials]=(votes[pickInitials]||0)+1; votedInitials.push(voterInitials);
-      saveVotesLocal(votes); saveVotedLocal(votedInitials); renderTeam(); renderMd(); renderObserverTally(); renderPlayerGauge(); return;
+      saveVotesLocal(votes); saveVotedLocal(votedInitials); renderTeam(); renderMd(); renderVote(); renderObserverTally(); renderPlayerGauge(); return;
     }
     const claimRef = rootRef.child('votedBy/'+voterInitials);
     const res = await claimRef.transaction(curr => curr ? curr : true);
     if(!res.committed){ throw new Error('already_voted'); }
     await rootRef.child('votes/'+pickInitials).transaction(curr => (curr||0)+1);
+    renderVote();
   }
   async function triggerReveal(){
     if(!enabled){ setPhaseLocal('revealed'); revealOverlaySync(Date.now()); return; }
@@ -602,14 +603,22 @@ function chime(){
 /* ====== Helpers & UI ====== */
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
+const ESC_MAP = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+const esc = s => String(s).replace(/[&<>"']/g, c => ESC_MAP[c]);
 function resultsData(){ return teamMembers.map(m=>({ name:m.name, initials:m.initials, votes:Number(votes[m.initials]||0) })).sort((a,b)=>b.votes-a.votes||a.name.localeCompare(b.name)); }
 function tallies(){
-  const present = teamMembers.filter(m=>m.status==='present').length;
-  const eligible = teamMembers.filter(m=>m.status==='present' && m.initials!=='KG').length; // voters exclude KG
+  let present=0, eligible=0;
+  for(const m of teamMembers){
+    if(m.status==='present'){
+      present++;
+      if(m.initials!=='KG') eligible++;
+    }
+  }
   const voted = new Set(votedInitials).size;
   return { total:teamMembers.length, present, eligible, absent:teamMembers.length-present, voted };
 }
-function renderAll(){ renderPhase(); renderTeam(); renderMd(); renderVote(); ensureQr(); renderObserverTally(); renderPlayerGauge(); }
+function renderCore(){ renderPhase(); renderTeam(); renderMd(); renderVote(); renderObserverTally(); renderPlayerGauge(); }
+function renderAll(){ renderCore(); ensureQr(); }
 
 function showView(id){
   const u = getUser();
@@ -620,7 +629,7 @@ function showView(id){
   if(id==='admin' && u!=='ZS'){ id='vote'; }
   $$('main > section').forEach(s=>s.classList.add('hide'));
   $('#view-'+id).classList.remove('hide');
-  if(id==='team'){ renderAll(); }
+  if(id==='team'){ renderCore(); ensureQr(); }
   if(id==='vote'){ renderVote(); }
   if(id==='admin'){ renderAdmin(); }
 }
@@ -673,7 +682,7 @@ function renderTeam(){
 
   const tb = $('#teamTable tbody');
   if(tb){
-    tb.innerHTML = teamMembers.map(m=>`<tr><td>${m.name}</td><td><strong>${m.initials}</strong></td><td>${m.status==='present'?'<span class="chip ok">Present</span>':'<span class="chip abs">Absent</span>'}</td></tr>`).join('');
+    tb.innerHTML = teamMembers.map(m=>`<tr><td>${esc(m.name)}</td><td><strong>${esc(m.initials)}</strong></td><td>${m.status==='present'?'<span class="chip ok">Present</span>':'<span class="chip abs">Absent</span>'}</td></tr>`).join('');
   }
 
   const bars = $('#teamBars');
@@ -681,7 +690,7 @@ function renderTeam(){
     const data = resultsData(), max = Math.max(1, ...data.map(d=>d.votes));
     bars.innerHTML = data.map(d=>`<div style="margin:10px 0">
       <div class="row" style="align-items:center">
-        <div style="font-weight:800;">${d.name} <span class="muted">(${d.initials})</span></div>
+        <div style="font-weight:800;">${esc(d.name)} <span class="muted">(${esc(d.initials)})</span></div>
         <div style="margin-left:auto" class="chip">${d.votes} vote${d.votes===1?'':'s'}</div>
       </div>
       <div class="bar"><span style="width:${Math.round((d.votes/max)*100)}%"></span></div>
@@ -819,7 +828,7 @@ function renderVote(){
   const presentChoices = teamMembers.filter(m=>m.status==='present' && m.initials!==u);
   if(presentChoices.length === 0){ showBlock('No present teammates to vote for.'); return; }
 
-  $('#voteFor').innerHTML = '<option value="">Select a teammate…</option>' + presentChoices.map(m=>`<option value="${m.initials}">${m.name} — ${m.initials}</option>`).join('');
+  $('#voteFor').innerHTML = '<option value="">Select a teammate…</option>' + presentChoices.map(m=>`<option value="${esc(m.initials)}">${esc(m.name)} — ${esc(m.initials)}</option>`).join('');
   showForm();
 }
 async function voteSubmit(){
@@ -833,6 +842,7 @@ async function voteSubmit(){
   const pickRec = teamMembers.find(t=>t.initials===sel && t.status==='present'); if(!pickRec){ msg.textContent='Selected teammate is not present.'; return; }
   try{
     await SYNC.voteTransaction(u, sel);
+    renderVote();
     msg.textContent = 'Vote recorded. Thank you!';
     for(let i=0;i<Math.round(16*confettiMultiplier());i++) spawnConfetti();
   }catch(e){ msg.textContent = e && e.message==='already_voted' ? 'You have already voted.' : 'Could not submit vote. Please try again.'; }
@@ -844,7 +854,7 @@ function openIdentityModal(){
   const idSel = $('#idSelect'), u = getUser();
   idSel.innerHTML = [`<option value="">Select your name…</option>`,
     `<option value="OBSERVER"${u==='OBSERVER'?' selected':''}>Observer — TV</option>`,
-    ...teamMembers.map(m=>`<option value="${m.initials}" ${u===m.initials?'selected':''}>${m.name} — ${m.initials}</option>`)].join('');
+    ...teamMembers.map(m=>`<option value="${esc(m.initials)}" ${u===m.initials?'selected':''}>${esc(m.name)} — ${esc(m.initials)}</option>`)].join('');
   $('#idModal').classList.add('active');
 }
 function closeIdentityModal(){ $('#idModal').classList.remove('active'); }
@@ -854,11 +864,11 @@ function closePwModal(){ $('#pwModal').classList.remove('active'); }
 function confirmIdentity(){
   const val = $('#idSelect').value.trim().toUpperCase();
   if(!val) return;
-  if(val==='OBSERVER'){ setUser('OBSERVER'); closeIdentityModal(); renderAll(); ensureQr(); showView('team'); return; }
+  if(val==='OBSERVER'){ setUser('OBSERVER'); closeIdentityModal(); renderCore(); ensureQr(); showView('team'); return; }
   if(val==='ZS'){ pendingZS = true; openPwModal(); return; }
   const rec = teamMembers.find(t=>t.initials===val); if(!rec) return;
   rec.status='present'; SYNC.saveTeam(teamMembers); setUser(val);
-  closeIdentityModal(); renderAll(); ensureQr();
+  closeIdentityModal(); renderCore(); ensureQr();
   showView(val==='KG' ? 'team' : 'vote');
 }
 /* ZS password flow */
@@ -866,7 +876,7 @@ function zsUnlock(){
   const pw = ($('#pwInput').value||'').trim();
   if(pw !== 'zsbf12'){ $('#pwMsg').textContent = 'Incorrect password.'; return; }
   const rec = teamMembers.find(t=>t.initials==='ZS'); if(rec){ rec.status='present'; SYNC.saveTeam(teamMembers); }
-  setUser('ZS'); pendingZS=false; closePwModal(); closeIdentityModal(); renderAll(); ensureQr(); showView('admin');
+  setUser('ZS'); pendingZS=false; closePwModal(); closeIdentityModal(); renderCore(); ensureQr(); showView('admin');
 }
 
 /* PIN modal */
@@ -910,12 +920,12 @@ function renderAdmin(){
   $('#teamArea').value = teamMembers.map(m=>`${m.name} - ${m.initials}`).join('\n');
   const tgt = $('#adminAttendance');
   tgt.innerHTML = teamMembers.map((m,i)=>`<label style="display:flex;align-items:center;gap:10px;margin:6px 0">
-    <input type="checkbox" data-i="${i}" ${m.status==='present'?'checked':''}/> ${m.name} <span class="muted">(${m.initials})</span>
+    <input type="checkbox" data-i="${i}" ${m.status==='present'?'checked':''}/> ${esc(m.name)} <span class="muted">(${esc(m.initials)})</span>
   </label>`).join('');
   tgt.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
     cb.addEventListener('change', e=>{
       const i=+e.target.getAttribute('data-i'); teamMembers[i].status = e.target.checked?'present':'absent';
-      SYNC.saveTeam(teamMembers); $('#adminMsg').textContent='Attendance updated.'; renderAll();
+      SYNC.saveTeam(teamMembers); $('#adminMsg').textContent='Attendance updated.'; renderCore();
     });
   });
   $('#saveTeam').addEventListener('click', saveTeamFromArea);
@@ -928,7 +938,7 @@ function saveTeamFromArea(){
   if(!arr.length){ alert('No valid lines. Use "Full Name - XX"'); return; }
   teamMembers=arr; SYNC.saveTeam(teamMembers);
   votes={}; votedInitials=[]; saveVotesLocal(votes); saveVotedLocal(votedInitials);
-  $('#adminMsg').textContent='Team saved. Session reset (attendance cleared).'; SYNC.resetSessionAndAttendance(); renderAll(); ensureQr();
+  $('#adminMsg').textContent='Team saved. Session reset (attendance cleared).'; SYNC.resetSessionAndAttendance(); renderCore(); ensureQr();
 }
 
 /* Fullscreen & sound toggle */
@@ -950,7 +960,7 @@ $('#btnStart').addEventListener('click', ()=> SYNC.setPhase('open'));
 $('#btnReveal').addEventListener('click', mdReveal);
 $('#btnCloseReveal').addEventListener('click', mdReveal);
 $('#openIdentity').addEventListener('click', openIdentityModal);
-$('#clearIdentity').addEventListener('click', ()=>{ setUser(''); renderAll(); ensureQr(); });
+$('#clearIdentity').addEventListener('click', ()=>{ setUser(''); renderCore(); ensureQr(); });
 $('#submitVote').addEventListener('click', voteSubmit);
 $('#idCancel').addEventListener('click', closeIdentityModal);
 $('#idOk').addEventListener('click', confirmIdentity);

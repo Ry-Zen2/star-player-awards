@@ -1,5 +1,5 @@
-const CACHE = "blacfox-starplayer-v1";
-const ASSETS = ["./","index.html","logo.png","manifest.json"];
+const CACHE = "blacfox-starplayer-v2";
+const ASSETS = ["./","index.html","logo.png","manifest.json","blacfox-watermark.png","404.html"];
 
 self.addEventListener("install", e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));

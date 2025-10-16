@@ -21,7 +21,7 @@
 
 <!-- Fonts: sleek headings, retro UI chrome -->
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Orbitron:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="pico.min.css">
 
 <!-- Firebase (compat builds) -->
@@ -57,9 +57,12 @@
     --tilt-y:0deg;
     --glow-x:50;
     --glow-y:50;
+    --scroll-depth:0;
+    --scroll-ambient:0;
   }
-  h1,h2,h3{font-family:Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; letter-spacing:.2px}
-  h1{font-weight:800} h2{font-weight:800} h3{font-weight:700}
+  h1,h2{font-family:'Orbitron', 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; letter-spacing:.4px}
+  h3{font-family:'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; letter-spacing:.2px}
+  h1{font-weight:700} h2{font-weight:700} h3{font-weight:700}
 
   .bg-layers{
     position:fixed;
@@ -87,7 +90,7 @@
     animation:starDrift 60s linear infinite;
     opacity:.35;
     transition:transform .8s var(--ease);
-    transform:translate3d(calc((var(--parallax-x) - 50)*-0.6px), calc((var(--parallax-y) - 50)*-0.4px),0);
+    transform:translate3d(calc((var(--parallax-x) - 50)*-0.6px), calc((var(--parallax-y) - 50)*-0.4px - var(--scroll-depth)*0.3px), 0);
   }
   .bg-halo{
     background:
@@ -97,7 +100,7 @@
     animation:haloPulse 18s ease-in-out infinite;
     opacity:.55;
     transition:transform 1s var(--ease);
-    transform:translate3d(calc((var(--parallax-x) - 50)*0.3px), calc((var(--parallax-y) - 50)*0.6px),0);
+    transform:translate3d(calc((var(--parallax-x) - 50)*0.3px), calc((var(--parallax-y) - 50)*0.6px + var(--scroll-depth)*0.25px),0);
   }
   @keyframes starDrift{
     0%{transform:translate3d(-2%,0,0) scale(1);}
@@ -113,34 +116,145 @@
     0%{ opacity:0; transform:translateY(24px) scale(.98); }
     100%{ opacity:1; transform:translateY(0) scale(1); }
   }
+  .texture-noise,
+  .frame-vignette{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:0;
+  }
+  .texture-noise{
+    background:
+      radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,.08), transparent),
+      radial-gradient(1px 1px at 32% 68%, rgba(255,255,255,.05), transparent),
+      radial-gradient(1px 1px at 78% 34%, rgba(255,122,0,.06), transparent),
+      radial-gradient(1px 1px at 56% 82%, rgba(255,255,255,.05), transparent);
+    background-size:140px 140px, 180px 180px, 210px 210px, 260px 260px;
+    mix-blend-mode:soft-light;
+    opacity:calc(.10 + min(var(--scroll-ambient), 50) * .002);
+    animation:noiseShift .8s steps(2) infinite;
+  }
+  .frame-vignette{
+    background:radial-gradient(circle at center, transparent 45%, rgba(0,0,0,.55) 100%);
+    opacity:calc(.30 + min(var(--scroll-ambient), 60) * .004);
+    transition:opacity .8s var(--ease);
+  }
+  @keyframes noiseShift{
+    0%{transform:translate3d(0,0,0);}
+    50%{transform:translate3d(-2%,1%,0);}
+    100%{transform:translate3d(0,0,0);}
+  }
 
-  /* 5s Terminal loading screen */
+  /* Cinematic loading crawl */
   .boot{
     position:fixed; inset:0; z-index:10000;
-    display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px;
-    background:#000; color:#fff; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+    background:#000;
+    color:#ffe0c3;
+    overflow:hidden;
+    perspective:900px;
+    font-family:'Orbitron', 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   }
-  .boot::before{
-    content:""; position:absolute; inset:-150% 0 auto 0; height:180%; background:
-      linear-gradient(0deg, rgba(255,255,255,.06) 0 8%, transparent 18% 82%, rgba(255,255,255,.04) 92% 100%);
-    animation:bootScan 7s linear infinite;
-    mix-blend-mode:screen; opacity:.45;
+  .boot-stars,
+  .boot-vignette{
+    position:absolute;
+    inset:-25%;
+    pointer-events:none;
   }
-  .boot::after{
-    content:""; position:absolute; inset:-30% -30%; background:radial-gradient(circle, rgba(255,122,0,.28), transparent 55%);
-    filter:blur(60px); opacity:.45;
+  .boot-stars{
+    background:
+      radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,.9), transparent),
+      radial-gradient(1px 1px at 78% 44%, rgba(255,208,150,.7), transparent),
+      radial-gradient(1px 1px at 44% 66%, rgba(255,255,255,.8), transparent),
+      radial-gradient(1px 1px at 32% 82%, rgba(255,122,0,.55), transparent),
+      radial-gradient(1px 1px at 65% 28%, rgba(255,255,255,.85), transparent);
+    background-size:120px 120px, 180px 180px, 220px 220px, 260px 260px, 300px 300px;
+    animation:bootStars 18s linear infinite;
+    opacity:.58;
   }
-  .glitch{ position:relative; font:700 22px/1 ui-monospace; text-transform:uppercase; letter-spacing:3px; animation:glitchPulse 2.4s ease-in-out infinite; }
-  .glitch::before,.glitch::after{content:attr(data-text); position:absolute; left:0; top:0}
-  .glitch::before{ color:#ff7a00; transform:translate(2px,0); animation:glitchShift 1.8s steps(2) infinite; }
-  .glitch::after{ color:#00ffd5; transform:translate(-2px,0); animation:glitchShift 2.3s steps(3) infinite reverse; }
-  .spinner{ width:36px; height:36px; border-radius:50%; border:3px solid rgba(255,255,255,.16); border-top-color:#fff; animation:spin 1s linear infinite; filter:drop-shadow(0 0 8px rgba(255,122,0,.55)); }
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .boot.hide{animation:fadeOut .3s ease forwards}
-  @keyframes fadeOut{to{opacity:0; visibility:hidden}}
-  @keyframes bootScan{0%{transform:translateY(-10%);}100%{transform:translateY(110%);}}
-  @keyframes glitchPulse{0%,100%{text-shadow:0 0 12px rgba(255,122,0,.7);}50%{text-shadow:0 0 24px rgba(255,122,0,1);}}
-  @keyframes glitchShift{0%{clip-path:inset(0 0 60% 0);}50%{clip-path:inset(40% 0 0 0);}100%{clip-path:inset(0 0 60% 0);}}
+  .boot-vignette{
+    background:radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,.8) 68%, rgba(0,0,0,.95) 100%);
+    mix-blend-mode:multiply;
+  }
+  .boot-frame{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:24px;
+    text-align:center;
+    transform-style:preserve-3d;
+  }
+  .boot-intro{
+    font:500 18px/1.6 "Inter", ui-sans-serif;
+    letter-spacing:2.4px;
+    text-transform:uppercase;
+    color:#ffe7d1;
+    opacity:0;
+    animation:bootIntro 4.6s ease forwards;
+  }
+  .boot-logo{
+    font:700 26px/1 'Orbitron', ui-sans-serif;
+    letter-spacing:12px;
+    text-transform:uppercase;
+    color:var(--accent);
+    text-shadow:0 0 26px rgba(255,122,0,.7);
+    opacity:0;
+    animation:bootLogo 5.2s 1.2s cubic-bezier(.42,0,.2,1) forwards;
+  }
+  .boot-logo span{color:#fff;}
+  .boot-crawl{
+    position:relative;
+    width:min(420px, 80vw);
+    height:200px;
+    overflow:hidden;
+    transform:rotateX(18deg);
+    opacity:0;
+    animation:bootCrawlWrap 6.4s 1.6s ease forwards;
+  }
+  .boot-crawl .crawl{
+    position:absolute;
+    bottom:-110%;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    font:600 16px/1.8 "Inter", ui-sans-serif;
+    letter-spacing:4px;
+    text-transform:uppercase;
+    color:#ffe0c3;
+    text-shadow:0 0 12px rgba(255,122,0,.4);
+    animation:bootCrawl 7.2s linear forwards;
+  }
+  .boot-crawl .crawl span{display:block;}
+  .boot.hide{animation:fadeOut .5s ease forwards}
+  @keyframes fadeOut{to{opacity:0; visibility:hidden;}}
+  @keyframes bootStars{
+    0%{transform:translate3d(0,0,0) scale(1);}
+    50%{transform:translate3d(-2%,1%,0) scale(1.05);}
+    100%{transform:translate3d(0,0,0) scale(1);}
+  }
+  @keyframes bootIntro{
+    0%{opacity:0; transform:translateY(24px);}
+    20%{opacity:.85; transform:translateY(0);}
+    60%{opacity:.85; transform:translateY(0);}
+    100%{opacity:0; transform:translateY(-32px);}
+  }
+  @keyframes bootLogo{
+    0%{opacity:0; transform:translateZ(-120px) scale(.85);}
+    40%{opacity:1; transform:translateZ(0) scale(1);}
+    70%{opacity:1; transform:translateZ(20px) scale(1.05);}
+    100%{opacity:.9; transform:translateZ(0) scale(1);}
+  }
+  @keyframes bootCrawlWrap{
+    0%{opacity:0;}
+    40%{opacity:1;}
+    100%{opacity:1;}
+  }
+  @keyframes bootCrawl{
+    0%{transform:translate3d(0,0,0);}
+    100%{transform:translate3d(0,-120%,0);}
+  }
 
   /* Watermark */
   .wm{
@@ -180,6 +294,10 @@
   body.phase-revealed header::before{opacity:.3;}
   body.phase-open header::after{opacity:1; animation:sweep 1.8s linear infinite;}
   body.reveal-glow header::after{ opacity:1; animation: sweep 1.2s linear infinite; }
+  body.phase-open header{background:rgba(18,12,20,.92); box-shadow:0 18px 42px rgba(255,122,0,.25);}
+  body.phase-revealed header{background:rgba(22,12,6,.94); box-shadow:0 22px 46px rgba(255,122,0,.32);}
+  body.phase-open .frame-vignette{opacity:.42;}
+  body.phase-revealed .frame-vignette{opacity:.52;}
 
   .topbar{display:flex; align-items:center; gap:16px; padding:14px 20px; max-width:1100px; margin:0 auto; position:relative;}
   .brand{display:flex; align-items:center; gap:12px; filter:drop-shadow(0 8px 22px rgba(0,0,0,.45));}
@@ -243,10 +361,19 @@
     padding:0 20px;
     position:relative;
     z-index:1;
+    perspective:1200px;
+    transform-style:preserve-3d;
   }
-  main > section{margin:20px 0;}
+  main > section{
+    margin:20px 0;
+    transform:translateZ(calc(var(--scroll-depth)*-0.3px));
+    transition:transform .6s var(--ease);
+  }
   main > section.view-active{animation:viewFade .55s var(--ease);}
   .panel{
+    --panel-raise:0px;
+    --panel-scale:1;
+    --panel-depth:calc(var(--scroll-depth)*-0.25px);
     background:linear-gradient(165deg, rgba(18,18,26,.96), rgba(6,6,10,.92));
     border:1px solid rgba(255,255,255,.09);
     border-radius:18px;
@@ -257,6 +384,7 @@
     position:relative;
     overflow:hidden;
     backdrop-filter:blur(18px);
+    transform:translate3d(0,var(--panel-raise),0) scale(var(--panel-scale)) translateZ(var(--panel-depth));
   }
   .panel::before,
   .panel::after{
@@ -272,6 +400,7 @@
     background:radial-gradient(circle at top, rgba(var(--accent-rgb),.2), rgba(255,255,255,0));
     opacity:.65;
     filter:blur(26px);
+    animation:panelLight 8s ease-in-out infinite;
   }
   .panel::after{
     inset:auto -18% -52% auto;
@@ -282,7 +411,8 @@
     filter:blur(32px);
   }
   .panel:hover{
-    transform:translate3d(0,-6px,0) scale(1.01);
+    --panel-raise:-8px;
+    --panel-scale:1.015;
     box-shadow:0 44px 70px rgba(0,0,0,.55);
     border-color:rgba(255,255,255,.18);
     backdrop-filter:blur(20px);
@@ -340,6 +470,7 @@
   .chip.ok{border-color:rgba(53,208,127,.4); color:#bff3d7; box-shadow:0 0 12px rgba(53,208,127,.15);}
   .chip.abs{border-color:rgba(239,71,111,.4); color:#ffc5d2; box-shadow:0 0 12px rgba(239,71,111,.12);}
   .chip:hover{transform:translateY(-2px);}
+  .count-pop{animation:countPop .6s var(--ease);}
 
   .bar{
     height:12px;
@@ -386,6 +517,7 @@
     border-color:rgba(var(--accent-rgb),.5);
     color:#ffd7b3;
     box-shadow:0 0 0 1px rgba(var(--accent-rgb),.15), 0 0 20px rgba(var(--accent-rgb),.18);
+    animation:phasePulse 2.6s ease-in-out infinite;
   }
   .pill.idle{background:rgba(255,255,255,.08); color:#ddd}
   .pill.closed{background:rgba(53,208,127,.18); color:#c9f3df; border-color:rgba(53,208,127,.45)}
@@ -450,9 +582,26 @@
     40%{transform:scale(1.05);}
     100%{transform:scale(1);}
   }
+  @keyframes panelLight{
+    0%,100%{transform:translate3d(6%, -4%, 0) scale(1); opacity:.55;}
+    50%{transform:translate3d(-10%, 12%, 0) scale(1.08); opacity:.95;}
+  }
   @keyframes drumSweep{
     0%{transform:rotate(0deg);}
     100%{transform:rotate(360deg);}
+  }
+  @keyframes countPop{
+    0%{transform:scale(1);}
+    40%{transform:scale(1.28);}
+    100%{transform:scale(1);}
+  }
+  @keyframes phasePulse{
+    0%,100%{transform:translateY(0); box-shadow:0 0 0 1px rgba(var(--accent-rgb),.14), 0 0 18px rgba(var(--accent-rgb),.2);}
+    50%{transform:translateY(-1px); box-shadow:0 0 0 3px rgba(var(--accent-rgb),.28), 0 0 30px rgba(var(--accent-rgb),.35);}
+  }
+  @keyframes rowRise{
+    0%{opacity:0; transform:translate3d(0,18px,0);}
+    100%{opacity:1; transform:translate3d(0,0,0);}
   }
 
   #teamTable tbody tr{
@@ -468,6 +617,11 @@
     transform:translateY(-2px);
     box-shadow:0 10px 24px rgba(0,0,0,.35);
     background:rgba(255,122,0,.08);
+  }
+  .row-enter{
+    opacity:0;
+    animation:rowRise .7s var(--ease) forwards;
+    animation-delay:calc(var(--i,0) * 0.05s);
   }
 
   /* Drumroll */
@@ -533,23 +687,38 @@
 
   @media (prefers-reduced-motion: reduce){
     .bg-stars,.bg-halo,.wm,.panel::before,.panel::after,
-    .boot::before,.boot::after,.glitch,
+    .boot-stars,.boot-intro,.boot-logo,.boot-crawl .crawl,
+    .texture-noise,.frame-vignette,
     .qrbox,.qrbox::after,.gauge,.gauge.bump,
     .drumroll,.confetti,.boot,
-    body.reveal-glow #view-team{animation:none !important;}
+    body.reveal-glow #view-team,
+    .row-enter,.pill.open,
+    .count-pop{animation:none !important;}
+    .row-enter{opacity:1 !important;}
     .panel,.btn,.qrbox,.chip,#teamTable tbody tr{transition:none !important;}
     .panel:hover,.btn:hover,.qrbox:hover,#teamTable tbody tr:hover{transform:none !important; box-shadow:none !important;}
+    body{--scroll-depth:0 !important; --scroll-ambient:0 !important;}
   }
 
   .hide{display:none !important}
 </style>
 </head>
 <body>
-<!-- 5s Terminal boot screen with spinner -->
-<div class="boot" id="boot">
-  <div class="glitch" data-text="Blacfox Terminal">Blacfox Terminal</div>
-  <div class="spinner" aria-label="Loading"></div>
-  <div style="font:12px ui-monospace; opacity:.7">initializing session…</div>
+<!-- Cinematic boot sequence -->
+<div class="boot" id="boot" aria-hidden="true">
+  <div class="boot-stars"></div>
+  <div class="boot-vignette"></div>
+  <div class="boot-frame">
+    <div class="boot-intro">A long time ago in a squad not so far away…</div>
+    <div class="boot-logo">Blacfox <span>•</span> Star Player</div>
+    <div class="boot-crawl">
+      <div class="crawl">
+        <span>Vote.</span>
+        <span>Reveal.</span>
+        <span>Celebrate.</span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Ambient background layers -->
@@ -560,6 +729,8 @@
 
 <!-- Watermark -->
 <div class="wm" aria-hidden="true"></div>
+<div class="texture-noise" aria-hidden="true"></div>
+<div class="frame-vignette" aria-hidden="true"></div>
 
 <div class="wrap" aria-live="polite">
   <header id="appHeader">
@@ -952,7 +1123,7 @@ function chime(){
 }
 
 /* ====== Helpers & UI ====== */
-const motionState = { raf:null };
+const motionState = { raf:null, scrollRaf:null };
 function initAmbientMotion(){
   if(prefersReducedMotion) return;
   const layers = document.querySelector('.bg-layers');
@@ -1000,6 +1171,40 @@ function attachButtonTilt(root=document){
     btn.addEventListener('pointerleave', reset);
     btn.addEventListener('pointerup', reset);
     btn.addEventListener('blur', reset);
+  });
+}
+function initScrollDepth(){
+  if(prefersReducedMotion) return;
+  const apply = ()=>{
+    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    const depth = Math.min(60, scrollY * 0.08);
+    const ambient = Math.min(80, scrollY * 0.12);
+    document.body.style.setProperty('--scroll-depth', depth.toFixed(2));
+    document.body.style.setProperty('--scroll-ambient', ambient.toFixed(2));
+  };
+  apply();
+  window.addEventListener('scroll', ()=>{
+    if(motionState.scrollRaf) cancelAnimationFrame(motionState.scrollRaf);
+    motionState.scrollRaf = requestAnimationFrame(apply);
+  }, { passive:true });
+}
+function setCount(el, value){
+  if(!el) return;
+  const str = String(value);
+  if(el.textContent === str) return;
+  el.textContent = str;
+  if(prefersReducedMotion) return;
+  el.classList.remove('count-pop');
+  void el.offsetWidth;
+  el.classList.add('count-pop');
+}
+function animateRows(rows){
+  if(prefersReducedMotion) return;
+  rows.forEach((row, idx)=>{
+    row.style.setProperty('--i', idx);
+    row.classList.remove('row-enter');
+    void row.offsetWidth;
+    row.classList.add('row-enter');
   });
 }
 
@@ -1058,9 +1263,17 @@ function updateNav(){
 function renderPhase(){
   const p = getPhaseLocal();
   const pill = $('#phasePill'), text = $('#phaseText');
+  document.body.classList.toggle('phase-wait', p==='not_started');
+  document.body.classList.toggle('phase-open', p==='open');
+  document.body.classList.toggle('phase-revealed', p==='revealed');
   if(p==='not_started'){ pill.className='pill idle'; pill.textContent='Waiting'; text.textContent='Waiting to begin…'; }
   else if(p==='open'){ pill.className='pill open'; pill.textContent='Voting'; text.textContent='Voting still in progress'; }
   else { pill.className='pill closed'; pill.textContent='Closed'; text.textContent='Winner revealed'; }
+  if(!prefersReducedMotion && pill){
+    pill.classList.remove('count-pop');
+    void pill.offsetWidth;
+    pill.classList.add('count-pop');
+  }
   const revealed = p==='revealed';
   $('#resultsHint').classList.toggle('hide', revealed);
   $('#teamBars').classList.toggle('hide', !revealed);
@@ -1077,14 +1290,15 @@ function renderTeam(){
   $('#kgBlock').classList.toggle('hide', u==='OBSERVER');
   $('#observerTally').classList.toggle('hide', u!=='OBSERVER');
 
-  $('#t-total') && ($('#t-total').textContent = total);
-  $('#t-present') && ($('#t-present').textContent = present);
-  $('#t-absent') && ($('#t-absent').textContent = absent);
-  $('#t-voted') && ($('#t-voted').textContent = voted);
+  setCount($('#t-total'), total);
+  setCount($('#t-present'), present);
+  setCount($('#t-absent'), absent);
+  setCount($('#t-voted'), voted);
 
   const tb = $('#teamTable tbody');
   if(tb){
     tb.innerHTML = teamMembers.map(m=>`<tr><td>${esc(m.name)}</td><td><strong>${esc(m.initials)}</strong></td><td>${m.status==='present'?'<span class="chip ok">Present</span>':'<span class="chip abs">Absent</span>'}</td></tr>`).join('');
+    animateRows(tb.querySelectorAll('tr'));
   }
 
   const bars = $('#teamBars');
@@ -1113,7 +1327,8 @@ function renderMd(){
   $('#kgBlock').classList.toggle('hide', !isKG && getUser()!=='ZS' ? true : false);
   if(!isKG) return;
   const {present, eligible, voted} = tallies();
-  $('#mdPresent').textContent = present; $('#mdVotes').textContent = voted;
+  setCount($('#mdPresent'), present);
+  setCount($('#mdVotes'), voted);
   const ph = getPhaseLocal();
   $('#btnStart').classList.toggle('hide', ph!=='not_started');
   $('#btnReveal').classList.toggle('hide', ph!=='open');
@@ -1428,6 +1643,7 @@ $('#pinEnable').addEventListener('change', (e)=> SYNC.setPinEnabled(e.target.che
   SYNC.init();
 
   initAmbientMotion();
+  initScrollDepth();
   attachButtonTilt(document);
 
   updateNav(); renderAll();

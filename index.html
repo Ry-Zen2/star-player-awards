@@ -232,7 +232,7 @@
     overflow:hidden;
     transform:rotateX(18deg);
     opacity:0;
-    animation:bootCrawlWrap 18s 3.8s ease forwards;
+    animation:bootCrawlWrap 12.7s 3.8s ease forwards;
   }
   .boot-crawl .crawl{
     position:absolute;
@@ -246,7 +246,7 @@
     text-transform:uppercase;
     color:#ffe0c3;
     text-shadow:0 0 12px rgba(255,122,0,.4);
-    animation:bootCrawl 16s 3.8s linear forwards;
+    animation:bootCrawl 12s 3.8s linear forwards;
   }
   .boot-crawl .crawl span{display:block;}
   .boot.hide{animation:fadeOut .5s ease forwards}
@@ -740,8 +740,8 @@
   <div class="boot-vignette"></div>
   <div class="boot-frame">
     <div class="boot-intro">
-      <p>For seven stellar years, Blacfox has outmaneuvered the galaxy’s toughest marketing challenges.</p>
-      <p>Every Friday, the most formidable squad in the sector reconvenes for the sacred stats debrief.</p>
+      <p>Seven years deep and Blacfox still hits hyperdrive on every brief.</p>
+      <p>Fridays mean stats, sass, and the crew keeping our hype engine humming.</p>
     </div>
     <div class="boot-sigil">
       <img src="logo.png" alt="Blacfox logo">
@@ -749,12 +749,11 @@
     <div class="boot-logo" aria-hidden="true">Blacfox <span>•</span> Star Player</div>
     <div class="boot-crawl">
       <div class="crawl">
-        <span>Year VII of the Blacfox collective.</span>
-        <span>Strategists forged in headline heat.</span>
-        <span>Designers who bend light, pixels, and deadlines.</span>
-        <span>Campaigns that conquer galaxies and quarterly targets alike.</span>
-        <span>An unstoppable marketing force feared by mediocre metrics.</span>
-        <span>Today we honor the team that keeps the hype engine roaring.</span>
+        <span>Year VII: the Blacfox saga continues.</span>
+        <span>Headline wranglers armed with laser-sharp taglines.</span>
+        <span>Design wizards coaxing photons into pitch decks.</span>
+        <span>Campaigns that vaporize KPIs faster than TIE fighters.</span>
+        <span>Tonight we salute the crew powering the hype drive.</span>
       </div>
     </div>
   </div>
@@ -1693,7 +1692,7 @@ $('#pinEnable').addEventListener('change', (e)=> SYNC.setPinEnabled(e.target.che
     const b=document.getElementById('boot');
     if(b){ b.classList.add('hide'); setTimeout(()=>b.remove(), 350); }
     if(!getUser()){ setTimeout(()=> openIdentityModal(), 250); }
-  }, 20500);
+  }, 16500);
 
   if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); }
 })();

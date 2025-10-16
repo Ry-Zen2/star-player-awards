@@ -186,45 +186,67 @@
     transform-style:preserve-3d;
   }
   .boot-intro{
-    font:500 18px/1.6 "Inter", ui-sans-serif;
-    letter-spacing:2.4px;
+    max-width:520px;
+    font:500 17px/1.7 "Inter", ui-sans-serif;
+    letter-spacing:2px;
     text-transform:uppercase;
     color:#ffe7d1;
     opacity:0;
-    animation:bootIntro 4.6s ease forwards;
+    animation:bootIntro 6.2s ease forwards;
+  }
+  .boot-intro p{
+    margin:0;
+    text-shadow:0 0 18px rgba(255,122,0,.2);
+  }
+  .boot-sigil{
+    width:120px;
+    height:120px;
+    border-radius:50%;
+    background:radial-gradient(circle at center, rgba(255,122,0,.35), rgba(0,0,0,.65));
+    display:grid;
+    place-items:center;
+    box-shadow:0 0 28px rgba(255,122,0,.35);
+    opacity:0;
+    transform:scale(.85);
+    animation:bootSigil 6s 1.4s ease forwards;
+  }
+  .boot-sigil img{
+    width:72px;
+    height:auto;
+    filter:drop-shadow(0 0 12px rgba(255,122,0,.55));
   }
   .boot-logo{
     font:700 26px/1 'Orbitron', ui-sans-serif;
-    letter-spacing:12px;
+    letter-spacing:10px;
     text-transform:uppercase;
     color:var(--accent);
     text-shadow:0 0 26px rgba(255,122,0,.7);
     opacity:0;
-    animation:bootLogo 5.2s 1.2s cubic-bezier(.42,0,.2,1) forwards;
+    animation:bootLogo 6.4s 2.4s cubic-bezier(.42,0,.2,1) forwards;
   }
   .boot-logo span{color:#fff;}
   .boot-crawl{
     position:relative;
     width:min(420px, 80vw);
-    height:200px;
+    height:220px;
     overflow:hidden;
     transform:rotateX(18deg);
     opacity:0;
-    animation:bootCrawlWrap 6.4s 1.6s ease forwards;
+    animation:bootCrawlWrap 8.4s 3.2s ease forwards;
   }
   .boot-crawl .crawl{
     position:absolute;
-    bottom:-110%;
+    bottom:-160%;
     width:100%;
     display:flex;
     flex-direction:column;
-    gap:6px;
-    font:600 16px/1.8 "Inter", ui-sans-serif;
+    gap:8px;
+    font:600 16px/1.85 "Inter", ui-sans-serif;
     letter-spacing:4px;
     text-transform:uppercase;
     color:#ffe0c3;
     text-shadow:0 0 12px rgba(255,122,0,.4);
-    animation:bootCrawl 7.2s linear forwards;
+    animation:bootCrawl 12s 3.4s linear forwards;
   }
   .boot-crawl .crawl span{display:block;}
   .boot.hide{animation:fadeOut .5s ease forwards}
@@ -235,15 +257,21 @@
     100%{transform:translate3d(0,0,0) scale(1);}
   }
   @keyframes bootIntro{
-    0%{opacity:0; transform:translateY(24px);}
-    20%{opacity:.85; transform:translateY(0);}
-    60%{opacity:.85; transform:translateY(0);}
-    100%{opacity:0; transform:translateY(-32px);}
+    0%{opacity:0; transform:translateY(28px);}
+    18%{opacity:1; transform:translateY(0);}
+    70%{opacity:1; transform:translateY(0);}
+    100%{opacity:0; transform:translateY(-34px);}
+  }
+  @keyframes bootSigil{
+    0%{opacity:0; transform:scale(.82) rotate(-8deg);}
+    30%{opacity:1; transform:scale(1) rotate(0deg);}
+    60%{opacity:1; transform:scale(1.04) rotate(2deg);}
+    100%{opacity:.95; transform:scale(1) rotate(0deg);}
   }
   @keyframes bootLogo{
-    0%{opacity:0; transform:translateZ(-120px) scale(.85);}
-    40%{opacity:1; transform:translateZ(0) scale(1);}
-    70%{opacity:1; transform:translateZ(20px) scale(1.05);}
+    0%{opacity:0; transform:translateZ(-140px) scale(.82);}
+    45%{opacity:1; transform:translateZ(0) scale(1);}
+    80%{opacity:1; transform:translateZ(24px) scale(1.05);}
     100%{opacity:.9; transform:translateZ(0) scale(1);}
   }
   @keyframes bootCrawlWrap{
@@ -253,7 +281,7 @@
   }
   @keyframes bootCrawl{
     0%{transform:translate3d(0,0,0);}
-    100%{transform:translate3d(0,-120%,0);}
+    100%{transform:translate3d(0,-185%,0);}
   }
 
   /* Watermark */
@@ -687,7 +715,7 @@
 
   @media (prefers-reduced-motion: reduce){
     .bg-stars,.bg-halo,.wm,.panel::before,.panel::after,
-    .boot-stars,.boot-intro,.boot-logo,.boot-crawl .crawl,
+    .boot-stars,.boot-intro,.boot-sigil,.boot-logo,.boot-crawl .crawl,
     .texture-noise,.frame-vignette,
     .qrbox,.qrbox::after,.gauge,.gauge.bump,
     .drumroll,.confetti,.boot,
@@ -709,13 +737,22 @@
   <div class="boot-stars"></div>
   <div class="boot-vignette"></div>
   <div class="boot-frame">
-    <div class="boot-intro">A long time ago in a squad not so far away…</div>
-    <div class="boot-logo">Blacfox <span>•</span> Star Player</div>
+    <div class="boot-intro">
+      <p>For seven stellar years, Blacfox has rewritten the marketing galaxy.</p>
+      <p>The most formidable squad in the sector assembles again tonight.</p>
+    </div>
+    <div class="boot-sigil">
+      <img src="logo.png" alt="Blacfox logo">
+    </div>
+    <div class="boot-logo" aria-hidden="true">Blacfox <span>•</span> Star Player</div>
     <div class="boot-crawl">
       <div class="crawl">
-        <span>Vote.</span>
-        <span>Reveal.</span>
-        <span>Celebrate.</span>
+        <span>Year VII of the Blacfox collective.</span>
+        <span>Strategists forged in headline heat.</span>
+        <span>Designers who bend light and story.</span>
+        <span>Campaigns that conquer galaxies and markets alike.</span>
+        <span>An unstoppable marketing force feared across every sector.</span>
+        <span>Tonight we honor the star who blazes brightest.</span>
       </div>
     </div>
   </div>
@@ -1654,7 +1691,7 @@ $('#pinEnable').addEventListener('change', (e)=> SYNC.setPinEnabled(e.target.che
     const b=document.getElementById('boot');
     if(b){ b.classList.add('hide'); setTimeout(()=>b.remove(), 350); }
     if(!getUser()){ setTimeout(()=> openIdentityModal(), 250); }
-  }, 5000);
+  }, 10000);
 
   if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); }
 })();

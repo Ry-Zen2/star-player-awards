@@ -1051,38 +1051,72 @@ const SYNC = (()=>{
   function setSession(id){
     detach(); sessionId = id || 'demo'; localStorage.setItem(LS.session, sessionId);
     rootRef = db.ref('sessions/'+sessionId); enabled = true;
-    attach(rootRef.child('phase'), s=> { if(s.exists()) setPhaseLocal(s.val()); });
-    attach(rootRef.child('team'),  s=> { teamMembers = s.val() || DEFAULT_MEMBERS.slice(); saveTeamLocal(teamMembers); renderCore(); });
-    attach(rootRef.child('votes'), s=> { votes = s.val() || {}; saveVotesLocal(votes); renderTeam(); renderMd(); renderObserverTally(); renderPlayerGauge(); });
-    attach(rootRef.child('votedBy'), s=> { votedInitials = Object.keys(s.val()||{}); saveVotedLocal(votedInitials); renderTeam(); renderMd(); renderVote(); renderObserverTally(); renderPlayerGauge(); });
-    attach(rootRef.child('pin'), s=> { sessionPin = (s.val() || '').toString(); updatePinUi(); });
-    attach(rootRef.child('pinEnabled'), s=> { pinEnabled = !!s.val(); updatePinUi(); renderVote(); });
-    attach(rootRef.child('revealStartAt'), s=> { const ts = Number(s.val()||0); if(ts && ts!==lastDrumSeen){ lastDrumSeen = ts; localStorage.setItem(LS.drum + sessionId, String(ts)); revealOverlaySync(ts); } });
+    attach(rootRef, s=>{
+      if(!s.exists()){ initSessionNode(); return; }
+      if(s.hasChildren(['phase','team','votes','votedBy'])){
+        applySessionState(normalizeSession(s.val()));
+      }else{
+        initSessionNode();
+      }
+    });
+    initSessionNode();
+  }
+  function initSessionNode(){  function initSessionNode(){
+    if(!enabled || !rootRef) return;
     rootRef.once('value').then(s=>{
-      if(!s.child('team').exists()) rootRef.child('team').set(teamMembers);
-      if(!s.child('votes').exists()) rootRef.child('votes').set(votes);
-      if(!s.child('votedBy').exists()) rootRef.child('votedBy').set({});
-      if(!s.child('phase').exists()) rootRef.child('phase').set(getPhaseLocal());
-      if(!s.child('pinEnabled').exists()) rootRef.child('pinEnabled').set(false);
+      if(s.exists() && s.hasChildren(['phase','team','votes','votedBy'])){ return; }
+      const existing = s.val() || {};
+      const payload = {
+        phase: existing.phase || getPhaseLocal(),
+        team: existing.team || teamMembers,
+        votes: existing.votes || votes,
+        votedBy: existing.votedBy || {},
+        pin: existing.pin || '',
+        pinEnabled: typeof existing.pinEnabled === 'boolean' ? existing.pinEnabled : false,
+        revealStartAt: existing.revealStartAt || null
+      };
+      return rootRef.set(payload).catch(console.warn);
     }).catch(console.warn);
   }
   function attach(ref, fn){ ref.on('value', fn); listeners.push({ref, fn}); }
   function detach(){ listeners.forEach(({ref, fn})=> ref.off('value', fn)); listeners.length=0; }
 
-  function setPhase(p){ if(!enabled) return setPhaseLocal(p); return rootRef.child('phase').set(p); }
-  function saveTeam(t){ if(!enabled){ saveTeamLocal(t); renderCore(); return; } return rootRef.child('team').set(t); }
+  function setPhase(p){
+    if(!enabled || !rootRef){
+      setPhaseLocal(p);
+      return;
+    }
+    return rootRef.child('phase').set(p);
+  }
+  function saveTeam(t){
+    if(!enabled || !rootRef){ saveTeamLocal(t); renderCore(); return; }
+    return rootRef.child('team').set(t);
+  }
   function resetSessionAndAttendance(){
     const cleared = teamMembers.map(m=>({name:m.name, initials:m.initials, status:'absent'}));
-    if(!enabled){
+    if(!enabled || !rootRef){
       teamMembers = cleared; saveTeamLocal(teamMembers);
       votes={}; votedInitials=[]; saveVotesLocal(votes); saveVotedLocal(votedInitials); setPhaseLocal('not_started'); renderCore(); return;
     }
-    return rootRef.update({ votes:{}, votedBy:{}, phase:'not_started', revealStartAt:null, team: cleared });
+    const payload = {
+      phase:'not_started',
+      votes:{},
+      votedBy:{},
+      team:cleared,
+      revealStartAt:null
+    };
+    return rootRef.update(payload);
   }
-  function generatePin(){ return rootRef.child('pin').set((''+Math.floor(1000 + Math.random()*9000))); }
-  function setPinEnabled(on){ return rootRef.child('pinEnabled').set(!!on); }
+  function generatePin(){
+    if(!enabled || !rootRef){ sessionPin = ('0000'); updatePinUi(); return; }
+    return rootRef.child('pin').set((''+Math.floor(1000 + Math.random()*9000)));
+  }
+  function setPinEnabled(on){
+    if(!enabled || !rootRef){ pinEnabled = !!on; updatePinUi(); return; }
+    return rootRef.child('pinEnabled').set(!!on);
+  }
   async function voteTransaction(voterInitials, pickInitials){
-    if(!enabled){
+    if(!enabled || !rootRef){
       if(votedInitials.includes(voterInitials)) throw new Error('already_voted');
       votes[pickInitials]=(votes[pickInitials]||0)+1; votedInitials.push(voterInitials);
       saveVotesLocal(votes); saveVotedLocal(votedInitials); renderTeam(); renderMd(); renderVote(); renderObserverTally(); renderPlayerGauge(); return;
@@ -1090,8 +1124,12 @@ const SYNC = (()=>{
     const claimRef = rootRef.child('votedBy/'+voterInitials);
     const res = await claimRef.transaction(curr => curr ? curr : true);
     if(!res.committed){ throw new Error('already_voted'); }
-    await rootRef.child('votes/'+pickInitials).transaction(curr => (curr||0)+1);
-    renderVote();
+    const updatedVotes = Object.assign({}, sessionCache ? sessionCache.votes || {} : votes);
+    updatedVotes[pickInitials] = (updatedVotes[pickInitials]||0)+1;
+    const updatedVoted = Object.assign({}, sessionCache ? sessionCache.votedBy || {} : {});
+    if(updatedVoted[voterInitials]) throw new Error('already_voted');
+    updatedVoted[voterInitials] = true;
+    await applySessionPatch({ votes: updatedVotes, votedBy: updatedVoted });
   }
   async function triggerReveal(){
     if(!enabled){ setPhaseLocal('revealed'); revealOverlaySync(Date.now()); return; }

@@ -1100,6 +1100,10 @@ const SYNC = (()=>{
   return { init, setSession, setPhase, saveTeam, resetSessionAndAttendance, generatePin, setPinEnabled, voteTransaction, triggerReveal, get enabled(){ return enabled; } };
 })();
 
+function ensurePromise(res){
+  return (res && typeof res.then === 'function') ? res : Promise.resolve(res);
+}
+
 /* ====== Web Audio: drumroll + chime ====== */
 let audioCtx=null, drumGain=null, drumOsc=null, drumNoise=null, drumFilter=null;
 function ensureAudio(){ if(audioCtx) return audioCtx; audioCtx = new (window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
@@ -1372,6 +1376,12 @@ function renderMd(){
   $('#btnReveal').classList.toggle('hide', ph!=='open');
   const shouldSuggest = ph==='open' && voted >= Math.max(0, eligible - 1);
   $('#btnCloseReveal').classList.toggle('hide', !shouldSuggest);
+  const btnStart = $('#btnStart');
+  const btnReveal = $('#btnReveal');
+  const btnClose = $('#btnCloseReveal');
+  if(btnStart){ btnStart.disabled = ph!=='not_started'; }
+  if(btnReveal){ btnReveal.disabled = ph!=='open'; }
+  if(btnClose){ btnClose.disabled = ph!=='open'; }
   updatePinUi();
 }
 function mdReveal(){ SYNC.triggerReveal(); }
@@ -1657,9 +1667,33 @@ window.addEventListener('hashchange', ()=>{ if(location.hash==='#view-vote') sho
 $$('nav .btn[data-view]').forEach(b=> b.addEventListener('click', e=> showView(e.target.getAttribute('data-view'))));
 
 /* Buttons */
-$('#btnStart').addEventListener('click', ()=> SYNC.setPhase('open'));
-$('#btnReveal').addEventListener('click', mdReveal);
-$('#btnCloseReveal').addEventListener('click', mdReveal);
+$('#btnStart').addEventListener('click', async ()=>{
+  const btn = $('#btnStart');
+  if(btn) btn.disabled = true;
+  try{
+    await ensurePromise(SYNC.setPhase('open'));
+  }finally{
+    renderMd();
+  }
+});
+$('#btnReveal').addEventListener('click', async ()=>{
+  const btn = $('#btnReveal');
+  if(btn) btn.disabled = true;
+  try{
+    await ensurePromise(SYNC.triggerReveal());
+  }finally{
+    renderMd();
+  }
+});
+$('#btnCloseReveal').addEventListener('click', async ()=>{
+  const btn = $('#btnCloseReveal');
+  if(btn) btn.disabled = true;
+  try{
+    await ensurePromise(SYNC.triggerReveal());
+  }finally{
+    renderMd();
+  }
+});
 $('#openIdentity').addEventListener('click', openIdentityModal);
 $('#clearIdentity').addEventListener('click', ()=>{ setUser(''); renderCore(); ensureQr(); });
 $('#submitVote').addEventListener('click', voteSubmit);

@@ -492,11 +492,7 @@ const SYNC = (()=>{
     detach(); sessionId = id || 'demo'; localStorage.setItem(LS.session, sessionId);
     rootRef = db.ref('sessions/'+sessionId); enabled = true;
     attach(rootRef.child('phase'), s=> { if(s.exists()) setPhaseLocal(s.val()); });
-<<<<<<< HEAD
     attach(rootRef.child('team'),  s=> { teamMembers = s.val() || DEFAULT_MEMBERS.slice(); saveTeamLocal(teamMembers); renderAll(); });
-=======
-    attach(rootRef.child('team'),  s=> { teamMembers = s.val() || DEFAULT_MEMBERS.slice(); saveTeamLocal(teamMembers); renderCore(); });
->>>>>>> parent of c337f0f (new rtdb)
     attach(rootRef.child('votes'), s=> { votes = s.val() || {}; saveVotesLocal(votes); renderTeam(); renderMd(); renderObserverTally(); renderPlayerGauge(); });
     attach(rootRef.child('votedBy'), s=> { votedInitials = Object.keys(s.val()||{}); saveVotedLocal(votedInitials); renderTeam(); renderMd(); renderVote(); renderObserverTally(); renderPlayerGauge(); });
     attach(rootRef.child('pin'), s=> { sessionPin = (s.val() || '').toString(); updatePinUi(); });
@@ -514,11 +510,7 @@ const SYNC = (()=>{
   function detach(){ listeners.forEach(({ref, fn})=> ref.off('value', fn)); listeners.length=0; }
 
   function setPhase(p){ if(!enabled) return setPhaseLocal(p); return rootRef.child('phase').set(p); }
-<<<<<<< HEAD
   function saveTeam(t){ if(!enabled){ saveTeamLocal(t); renderAll(); return; } return rootRef.child('team').set(t); }
-=======
-  function saveTeam(t){ if(!enabled){ saveTeamLocal(t); renderCore(); return; } return rootRef.child('team').set(t); }
->>>>>>> parent of c337f0f (new rtdb)
   function resetSessionAndAttendance(){
     const cleared = teamMembers.map(m=>({name:m.name, initials:m.initials, status:'absent'}));
     if(!enabled){
@@ -539,10 +531,6 @@ const SYNC = (()=>{
     const res = await claimRef.transaction(curr => curr ? curr : true);
     if(!res.committed){ throw new Error('already_voted'); }
     await rootRef.child('votes/'+pickInitials).transaction(curr => (curr||0)+1);
-<<<<<<< HEAD
-=======
-    renderVote();
->>>>>>> parent of c337f0f (new rtdb)
   }
   async function triggerReveal(){
     if(!enabled){ setPhaseLocal('revealed'); revealOverlaySync(Date.now()); return; }

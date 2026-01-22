@@ -263,14 +263,6 @@
           <button class="btn small accent hide" id="btnStart">Start Voting</button>
           <button class="btn small accent hide" id="btnReveal">Reveal Winner</button>
           <button class="btn small accent hide" id="btnCloseReveal">Close & Reveal Now</button>
-          <!-- PIN controls (KG only) -->
-          <span id="pinPanel" class="hide" style="display:flex; align-items:center; gap:8px;">
-            <label class="muted" style="display:flex; align-items:center; gap:6px">
-              <input type="checkbox" id="pinEnable" /> Require PIN
-            </label>
-            <button class="btn small" id="pinGenerate">New PIN</button>
-            <span class="chip" id="pinValue" title="Share this PIN with voters"></span>
-          </span>
         </div>
 
         <div class="grid cols-2">
@@ -348,14 +340,7 @@
             <button class="btn accent" id="saveTeam">Save Team</button>
             <button class="btn" id="resetSession">New Day</button>
           </div>
-          <p class="muted" style="margin-top:8px">Saves to the session and locally for offline.</p>
-          <div style="height:8px"></div>
-          <label for="sessionInput">Session code (all devices must match)</label>
-          <div class="row">
-            <input id="sessionInput" placeholder="e.g. fox123" />
-            <button class="btn" id="saveSessionCode">Use code</button>
-          </div>
-          <p class="muted" style="margin-top:6px">QR updates automatically (Observer-only).</p>
+          <p class="muted" style="margin-top:8px">Session is locked for the team; QR already points to it.</p>
         </div>
 
         <div class="panel">
@@ -418,7 +403,7 @@
 /* ====== CONFIG (Firebase) ====== */
 window.BF_SYNC = {
   provider: 'firebase',
-  sessionId: 'demo',
+  sessionId: 'main',
   firebaseConfig: {
     apiKey: "AIzaSyCPowEBl-_CSqIObkgddFD2ZrvcXS4DsO4",
     authDomain: "bf-star-player.firebaseapp.com",
@@ -472,7 +457,7 @@ function setPhaseLocal(p){ localStorage.setItem(LS.phase, p); renderPhase(); ren
 let teamMembers = loadTeamLocal();
 let votes = loadVotesLocal();
 let votedInitials = loadVotedLocal();
-let sessionId = (new URLSearchParams(location.search).get('s')) || localStorage.getItem(LS.session) || (window.BF_SYNC && window.BF_SYNC.sessionId) || 'demo';
+let sessionId = 'main';
 localStorage.setItem(LS.session, sessionId);
 let sessionPin = '';
 let pinEnabled = false;
@@ -495,8 +480,6 @@ const SYNC = (()=>{
     attach(rootRef.child('team'),  s=> { teamMembers = s.val() || DEFAULT_MEMBERS.slice(); saveTeamLocal(teamMembers); renderAll(); });
     attach(rootRef.child('votes'), s=> { votes = s.val() || {}; saveVotesLocal(votes); renderTeam(); renderMd(); renderObserverTally(); renderPlayerGauge(); });
     attach(rootRef.child('votedBy'), s=> { votedInitials = Object.keys(s.val()||{}); saveVotedLocal(votedInitials); renderTeam(); renderMd(); renderVote(); renderObserverTally(); renderPlayerGauge(); });
-    attach(rootRef.child('pin'), s=> { sessionPin = (s.val() || '').toString(); updatePinUi(); });
-    attach(rootRef.child('pinEnabled'), s=> { pinEnabled = !!s.val(); updatePinUi(); renderVote(); });
     attach(rootRef.child('revealStartAt'), s=> { const ts = Number(s.val()||0); if(ts && ts!==lastDrumSeen){ lastDrumSeen = ts; localStorage.setItem(LS.drum + sessionId, String(ts)); revealOverlaySync(ts); } });
     rootRef.once('value').then(s=>{
       if(!s.child('team').exists()) rootRef.child('team').set(teamMembers);
@@ -519,8 +502,8 @@ const SYNC = (()=>{
     }
     return rootRef.update({ votes:{}, votedBy:{}, phase:'not_started', revealStartAt:null, team: cleared });
   }
-  function generatePin(){ return rootRef.child('pin').set((''+Math.floor(1000 + Math.random()*9000))); }
-  function setPinEnabled(on){ return rootRef.child('pinEnabled').set(!!on); }
+  function generatePin(){ return Promise.resolve(); }
+  function setPinEnabled(on){ return Promise.resolve(on); }
   async function voteTransaction(voterInitials, pickInitials){
     if(!enabled){
       if(votedInitials.includes(voterInitials)) throw new Error('already_voted');
@@ -689,13 +672,7 @@ function renderTeam(){
   }
 }
 
-function updatePinUi(){
-  const show = getUser()==='KG';
-  $('#pinPanel').classList.toggle('hide', !show);
-  if(!show) return;
-  $('#pinEnable').checked = !!pinEnabled;
-  $('#pinValue').textContent = pinEnabled ? `PIN: ${sessionPin||'—'}` : 'PIN disabled';
-}
+function updatePinUi(){ pinEnabled = false; }
 
 function renderMd(){
   const isKG = getUser()==='KG';
@@ -813,9 +790,6 @@ function renderVote(){
   if(ph==='revealed'){ showBlock('Voting is closed.'); return; }
   if(votedInitials.includes(u)){ showBlock('You have already voted this session.'); return; }
 
-  const pinOk = localStorage.getItem(LS.pinok + sessionId) === '1';
-  if(SYNC.enabled && pinEnabled && !pinOk){ openPinModal(); showBlock('Enter the session PIN to unlock voting.'); return; }
-
   const presentChoices = teamMembers.filter(m=>m.status==='present' && m.initials!==u);
   if(presentChoices.length === 0){ showBlock('No present teammates to vote for.'); return; }
 
@@ -892,13 +866,7 @@ function renderAdmin(){
           <button class="btn" id="resetSession">New Day</button>
         </div>
         <p class="muted" style="margin-top:8px">Clears votes & attendance; keeps the team list.</p>
-        <div style="height:8px"></div>
-        <label for="sessionInput">Session code</label>
-        <div class="row">
-          <input id="sessionInput" placeholder="e.g. fox123" />
-          <button class="btn" id="saveSessionCode">Use code</button>
-        </div>
-        <p class="muted" style="margin-top:6px">QR updates automatically (Observer-only).</p>
+        <p class="muted" style="margin-top:6px">Session is locked for the team; QR already points to it.</p>
       </div>
       <div class="panel">
         <h3>Attendance</h3>
@@ -920,8 +888,6 @@ function renderAdmin(){
   });
   $('#saveTeam').addEventListener('click', saveTeamFromArea);
   $('#resetSession').addEventListener('click', ()=>{ if(confirm('Start a new day? This clears votes and attendance.')){ SYNC.resetSessionAndAttendance(); $('#adminMsg').textContent='New day started (attendance cleared).'; } });
-  $('#sessionInput').value = sessionId || '';
-  $('#saveSessionCode').addEventListener('click', ()=>{ const val = ($('#sessionInput').value||'').trim(); if(!val){ alert('Enter a session code'); return; } SYNC.setSession(val); ensureQr(); renderVote(); $('#adminMsg').textContent='Session code set. Share the QR (Observer).'; });
 }
 function saveTeamFromArea(){
   const arr=[]; for(const line of $('#teamArea').value.split('\n').map(x=>x.trim()).filter(Boolean)){ const m=line.match(/^(.+?)\s*-\s*([A-Za-z]{1,4})$/); if(m) arr.push({name:m[1].trim(), initials:m[2].toUpperCase(), status:'absent'}); }
@@ -958,14 +924,11 @@ $('#pwCancel').addEventListener('click', ()=>{ pendingZS=false; closePwModal(); 
 $('#pwOk').addEventListener('click', zsUnlock);
 $('#pinOk').addEventListener('click', checkPin);
 $('#pinCancel').addEventListener('click', closePinModal);
-$('#pinGenerate').addEventListener('click', ()=> SYNC.generatePin());
-$('#pinEnable').addEventListener('change', (e)=> SYNC.setPinEnabled(e.target.checked));
 
 /* Init */
 (function init(){
   saveTeamLocal(teamMembers); saveVotesLocal(votes); saveVotedLocal(votedInitials);
-  const qs = new URLSearchParams(location.search);
-  if(qs.get('s')){ sessionId = qs.get('s'); localStorage.setItem(LS.session, sessionId); }
+  sessionId = 'main'; localStorage.setItem(LS.session, sessionId);
   if(window.BF_SYNC) window.BF_SYNC.sessionId = sessionId;
   SYNC.init();
 

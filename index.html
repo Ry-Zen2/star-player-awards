@@ -463,6 +463,8 @@ let sessionPin = '';
 let pinEnabled = false;
 let lastDrumSeen = Number(localStorage.getItem(LS.drum + sessionId) || 0);
 let soundsEnabled = localStorage.getItem(LS.snd) !== '0';
+let serverTimeOffsetMs = 0;
+function serverNow(){ return Date.now() + serverTimeOffsetMs; }
 
 /* ====== Firebase Sync ====== */
 const SYNC = (()=>{
@@ -471,7 +473,9 @@ const SYNC = (()=>{
     const cfg = window.BF_SYNC || {};
     if(!cfg.firebaseConfig || !cfg.sessionId){ return; }
     try{ firebase.apps.length ? firebase.app() : firebase.initializeApp(cfg.firebaseConfig); }catch(e){}
-    db = firebase.database(); setSession(cfg.sessionId || 'demo');
+    db = firebase.database();
+    db.ref('.info/serverTimeOffset').on('value', s=> { serverTimeOffsetMs = Number(s.val() || 0); });
+    setSession(cfg.sessionId || 'demo');
   }
   function setSession(id){
     detach(); sessionId = id || 'demo'; localStorage.setItem(LS.session, sessionId);
@@ -736,7 +740,7 @@ function spawnConfetti(opts={}){ const el = document.createElement('div'); el.cl
 
 /* Drumroll overlay — synced via revealStartAt */
 function revealOverlaySync(serverTs){
-  const now = Date.now();
+  const now = serverNow();
   let remain = Math.max(0, Math.ceil(10 - (now - serverTs)/1000));
   const o = document.createElement('div'); o.className='drumroll';
   o.innerHTML = `<div class="drumroll-text">Drum roll…</div><div class="countdown" id="dr-count">${remain}</div><div class="drumroll-bar"><div class="bar-fill" id="dr-fill" style="width:${(10-remain)*10}%"></div></div>`;
